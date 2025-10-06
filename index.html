@@ -1,44 +1,255 @@
-// En tu <script> de index.html, reemplaza solo esta función
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameLauncher Pro: Dinámico 🚀</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0d1117; color: #e6e6e6; }
+        .title-cell { cursor: pointer; color: #818cf8; font-weight: bold; transition: color 0.2s ease-in-out; }
+        .title-cell:hover { color: #a5b4fc; text-decoration: underline; }
+        .data-row:hover { background-color: #161b22; }
+        .spinner { border: 3px solid rgba(255, 255, 255, 0.3); border-top: 3px solid #818cf8; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .filter-btn { transition: all 0.2s ease-in-out; }
+        .filter-btn.active { background-color: #4f46e5; color: white; box-shadow: 0 0 15px rgba(79, 70, 229, 0.5); }
+        .modal-enter { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-leave { animation: fadeOut 0.3s ease-out; }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+        .horizontal-scroll-container { scrollbar-width: thin; scrollbar-color: #4f46e5 #1a222c; }
+        .horizontal-scroll-container::-webkit-scrollbar { height: 8px; }
+        .horizontal-scroll-container::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
+        .horizontal-scroll-container::-webkit-scrollbar-track { background: #1a222c; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
 
-function toggleDetails(gameId) {
-    const detailsPanel = document.getElementById('details-panel');
-    const game = allGamesData.find(g => g.id === gameId);
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8 p-4 bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-xl shadow-2xl">
+            <h1 class="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 mb-2">
+                🚀 GameLauncher Pro
+            </h1>
+            <p id="current-date" class="text-gray-400 font-semibold"></p>
+        </header>
 
-    if (!gameId || detailsPanel.classList.contains('active')) {
-        detailsPanel.classList.add('modal-leave');
-        setTimeout(() => {
-            detailsPanel.classList.add('hidden');
-            detailsPanel.classList.remove('modal-leave', 'active');
-            detailsPanel.innerHTML = '';
-        }, 300);
-    } else if (game) {
-        // Lógica para mostrar el tráiler: video si existe, si no, la imagen.
-        let mediaElement = game.trailerUrl ?
-            `<video controls autoplay muted loop class="w-full h-full rounded">
-                <source src="${game.trailerUrl}" type="video/mp4">
-                Tu navegador no soporta el vídeo.
-            </video>` :
-            `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full">`;
-
-        detailsPanel.innerHTML = `
-            <div class="relative w-full max-w-4xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
-                <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
-                <div class="flex flex-col md:flex-row gap-6">
-                    <div class="flex-shrink-0 w-full md:w-1/3">
-                        <div class="aspect-w-16 aspect-h-9 mb-4">${mediaElement}</div>
-                        ${game.steamUrl ? `<a href="${game.steamUrl}" target="_blank" rel="noopener noreferrer" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Ver en Steam</a>` : ''}
-                    </div>
-                    <div class="flex-grow">
-                        <h2 class="text-3xl font-bold text-indigo-400 mb-2">${game.title}</h2>
-                        <p class="mb-4"><span class="font-bold text-gray-300">Lanzamiento:</span> ${game.releaseDateString}</p>
-                        <p class="text-sm text-gray-400 italic">${game.notes}</p>
-                    </div>
+        <section id="featured-section" class="mb-10">
+            <h2 id="featured-title" class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6">
+                🔥 Calendario de Estrenos
+            </h2>
+            <div id="featured-games-container" class="horizontal-scroll-container flex overflow-x-auto gap-6 pb-4">
+                <div id="featured-loading" class="text-center w-full py-10 text-lg text-indigo-400">
+                    Buscando los juegos más esperados... <span class="spinner inline-block ml-2"></span>
                 </div>
             </div>
-        `;
-        detailsPanel.classList.remove('hidden');
-        detailsPanel.classList.add('active');
-        detailsPanel.onclick = () => toggleDetails();
-    }
-}
-window.toggleDetails = toggleDetails;
+        </section>
+        
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <input type="text" id="search-input" placeholder="Buscar en la lista..."
+                   class="w-full md:w-auto p-3 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition duration-200"
+                   oninput="applyFilters()">
+            <div class="flex items-center gap-2">
+                <button id="refresh-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold p-3 rounded-lg shadow-lg transition duration-200" onclick="refreshData()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5M12 4V2M12 22v-2M4 12H2M22 12h-2" /></svg>
+                </button>
+            </div>
+        </div>
+        
+        <div id="month-filters" class="mb-6 flex flex-wrap gap-2 justify-center p-3 bg-gray-800 rounded-lg"></div>
+        <div id="error-message" class="hidden bg-red-800 p-4 rounded-lg mb-4 text-sm"></div>
+        <div class="scroll-container overflow-x-auto rounded-xl shadow-2xl border border-gray-700">
+            <table class="min-w-full divide-y divide-gray-700">
+                <thead class="bg-gray-800 sticky top-0">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Título</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Plataformas</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Fecha Estreno</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Género</th>
+                    </tr>
+                </thead>
+                <tbody id="game-table-body" class="bg-gray-900 divide-y divide-gray-700"></tbody>
+            </table>
+        </div>
+        <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
+    </div>
+
+    <script type="module">
+        let allGamesData = [];
+        let activeMonthFilter = 0;
+
+        async function fetchGamesFromAPI() {
+            try {
+                const response = await fetch('/api/getGames');
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                return data.map(game => ({
+                    id: game.id,
+                    title: game.title,
+                    imageUrl: game.imageUrl,
+                    platforms: game.platforms,
+                    releaseDate: new Date(game.releaseDate),
+                    releaseDateString: game.releaseDateString,
+                    genre: game.genre,
+                    notes: game.notes,
+                    isFeatured: game.isFeatured, 
+                    steamUrl: game.steamUrl,
+                    trailerUrl: game.trailerUrl
+                }));
+            } catch (error) {
+                console.error("Error al obtener los juegos:", error);
+                const errorElement = document.getElementById('error-message');
+                errorElement.textContent = `No se pudieron cargar los datos. ${error.message}`;
+                errorElement.classList.remove('hidden');
+                return [];
+            }
+        }
+        
+        function renderFeaturedGames(games) {
+            const container = document.getElementById('featured-games-container');
+            container.innerHTML = '';
+
+            const upcomingGames = games
+                .filter(g => g.releaseDate && g.releaseDate >= new Date())
+                .sort((a, b) => a.releaseDate - b.releaseDate);
+
+            if (upcomingGames.length === 0) {
+                container.innerHTML = `<p class="text-center w-full text-gray-500">No hay próximos lanzamientos destacados en la lista.</p>`;
+                return;
+            }
+
+            upcomingGames.slice(0, 15).forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'flex-shrink-0 w-48 text-center cursor-pointer transition-transform duration-200 hover:scale-105';
+                card.innerHTML = `
+                    <p class="font-bold text-lg text-indigo-400">${game.releaseDateString.split(' ')[0]} <span class="text-gray-400">${game.releaseDateString.split(' ')[1]}</span></p>
+                    <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-64 object-cover my-2 border-2 border-transparent hover:border-indigo-500">
+                    <h3 class="text-sm font-semibold text-white truncate">${game.title}</h3>
+                `;
+                card.onclick = () => toggleDetails(game.id);
+                container.appendChild(card);
+            });
+        }
+        
+        function renderMonthFilters() {
+            const container = document.getElementById('month-filters');
+            container.innerHTML = '';
+            const months = ['Todos', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            months.forEach((index, month) => {
+                const btn = document.createElement('button');
+                btn.textContent = month;
+                btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600 ${index === activeMonthFilter ? 'active' : ''}`;
+                btn.onclick = () => { activeMonthFilter = index; applyFilters(); };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderTable(games) {
+            const tableBody = document.getElementById('game-table-body');
+            tableBody.innerHTML = '';
+            if (games.length === 0) {
+                 tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos.</td></tr>`;
+                 return;
+            }
+            games.forEach(game => {
+                 const row = document.createElement('tr');
+                row.className = 'data-row';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm title-cell">${game.title}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.platforms}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.releaseDate ? game.releaseDate.toLocaleDateString('es-ES') : 'TBA'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.genre}</td>
+                `;
+                row.querySelector('.title-cell').onclick = () => toggleDetails(game.id);
+                tableBody.appendChild(row);
+            });
+        }
+
+        function applyFilters() {
+            let filteredGames = [...allGamesData].sort((a,b) => (a.releaseDate || 0) - (b.releaseDate || 0));
+            if (activeMonthFilter > 0) {
+                filteredGames = filteredGames.filter(g => g.releaseDate && g.releaseDate.getMonth() === activeMonthFilter - 1);
+            }
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            if (searchTerm) {
+                filteredGames = filteredGames.filter(g => g.title.toLowerCase().includes(searchTerm));
+            }
+            document.querySelectorAll('#month-filters .filter-btn').forEach((btn, index) => btn.classList.toggle('active', index === activeMonthFilter));
+            renderTable(filteredGames);
+        }
+        window.applyFilters = applyFilters;
+        
+        function toggleDetails(gameId) {
+            const detailsPanel = document.getElementById('details-panel');
+            const game = allGamesData.find(g => g.id === gameId);
+
+            if (!gameId || detailsPanel.classList.contains('active')) {
+                detailsPanel.classList.add('modal-leave');
+                setTimeout(() => {
+                    detailsPanel.classList.add('hidden');
+                    detailsPanel.classList.remove('modal-leave', 'active');
+                    detailsPanel.innerHTML = '';
+                }, 300);
+            } else if (game) {
+                let mediaElement = game.trailerUrl ?
+                    `<video controls autoplay muted loop class="w-full h-full rounded">
+                        <source src="${game.trailerUrl}" type="video/mp4">
+                        Tu navegador no soporta el vídeo.
+                    </video>` :
+                    `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full">`;
+
+                detailsPanel.innerHTML = `
+                    <div class="relative w-full max-w-4xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
+                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <div class="flex-shrink-0 w-full md:w-1/3">
+                                <div class="aspect-w-16 aspect-h-9 mb-4">${mediaElement}</div>
+                                ${game.steamUrl ? `<a href="${game.steamUrl}" target="_blank" rel="noopener noreferrer" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Ver en Steam</a>` : ''}
+                            </div>
+                            <div class="flex-grow">
+                                <h2 class="text-3xl font-bold text-indigo-400 mb-2">${game.title}</h2>
+                                <p class="mb-4"><span class="font-bold text-gray-300">Lanzamiento:</span> ${game.releaseDateString}</p>
+                                <p class="text-sm text-gray-400 italic">${game.notes}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                detailsPanel.classList.remove('hidden');
+                detailsPanel.classList.add('active');
+                detailsPanel.onclick = () => toggleDetails();
+            }
+        }
+        window.toggleDetails = toggleDetails;
+
+        async function refreshData() {
+            document.getElementById('featured-loading').style.display = 'block';
+            document.getElementById('table-loading').style.display = 'block';
+            document.getElementById('error-message').classList.add('hidden');
+            
+            allGamesData = await fetchGamesFromAPI();
+            
+            document.getElementById('featured-loading').style.display = 'none';
+            document.getElementById('table-loading').style.display = 'none';
+
+            renderFeaturedGames(allGamesData);
+            applyFilters();
+        };
+        window.refreshData = refreshData;
+
+        function main() {
+            const dateElement = document.getElementById('current-date');
+            const today = new Date();
+            dateElement.textContent = `Hoy es ${today.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+            
+            renderMonthFilters();
+            refreshData();
+        }
+
+        main();
+    </script>
+</body>
+</html>

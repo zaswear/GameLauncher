@@ -16,14 +16,19 @@ export default async function handler(request, response) {
         const tokenJson = await tokenResponse.json();
         const accessToken = tokenJson.access_token;
         
-        const nowInSeconds = Math.floor(Date.now() / 1000);
+        // --- CORRECCIÓN DE LA FECHA ---
+        // Obtenemos la fecha de hoy
+        const now = new Date();
+        // Creamos una nueva fecha que sea el día 1 del mes actual
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        // Convertimos esa fecha a segundos para la API
+        const startOfMonthInSeconds = Math.floor(startOfMonth.getTime() / 1000);
         
-        // --- QUERY MEJORADA ---
-        // Ahora pedimos también los datos de vídeos y sitios web
+        // Usamos la nueva fecha en la query para obtener todos los juegos desde el inicio del mes
         const body = `
             fields name, cover.url, platforms.abbreviation, first_release_date, summary, genres.name, hypes, videos.video_id, videos.name, websites.url, websites.category;
-            where category = 0 & first_release_date > ${nowInSeconds} & cover.url != null & platforms = {6,167,169} & hypes > 1;
-            sort hypes desc;
+            where category = 0 & first_release_date >= ${startOfMonthInSeconds} & cover.url != null & platforms = {6,167,169} & hypes > 1;
+            sort first_release_date asc;
             limit 50;
         `;
 

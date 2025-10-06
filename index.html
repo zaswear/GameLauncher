@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameLauncher</title>
+    <!-- Incluye Tailwind CSS para un diseño moderno y responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo personalizado para la tabla y el scroll */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Fondo oscuro tipo consola */
+            color: #e6e6e6;
+            padding: 0;
+            margin: 0;
+        }
+        /* Estilo para hacer la tabla editable más visible */
+        [contenteditable]:focus {
+            outline: 2px solid #5778ff; /* Borde azul brillante al editar */
+            background-color: #1a222c;
+            border-radius: 4px;
+        }
+        /* Barra de desplazamiento estilo "neon" */
+        .scroll-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .scroll-container::-webkit-scrollbar-thumb {
+            background-color: #5778ff;
+            border-radius: 10px;
+        }
+        .scroll-container::-webkit-scrollbar-track {
+            background: #1a222c;
+        }
+        /* Efecto hover en filas */
+        .data-row:hover {
+            background-color: #1a222c;
+        }
+        /* Estilo para el botón de carga */
+        .btn-loading {
+            position: relative;
+        }
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Encabezado de la Aplicación -->
+        <header class="mb-8 p-4 bg-gray-800 rounded-xl shadow-2xl">
+            <h1 class="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600 mb-2">
+                🎮 GameLauncher
+            </h1>
+            <p class="text-gray-400">Tu gestor de lanzamientos de videojuegos editables. ID de Usuario: <span id="user-id-display" class="font-mono text-xs bg-gray-700 px-2 py-0.5 rounded">Cargando...</span></p>
+        </header>
+
+        <!-- Controles y Filtros -->
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <input type="text" id="search-input" placeholder="Buscar por título o plataforma..."
+                   class="w-full md:w-80 p-3 rounded-lg bg-gray-700 text-white border-2 border-gray-600 focus:border-indigo-500 transition duration-200"
+                   oninput="filterTable()">
+            <button id="add-row-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-200 transform hover:scale-105 flex items-center space-x-2" onclick="addNewRow()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                <span>Añadir Juego</span>
+            </button>
+        </div>
+
+        <!-- Área de la Tabla (Responsive Scroll) -->
+        <div id="loading-indicator" class="text-center py-10 text-lg text-indigo-400 hidden">
+            Cargando datos de lanzamientos... <span class="spinner inline-block ml-2"></span>
+        </div>
+        <div id="error-message" class="hidden bg-red-800 p-4 rounded-lg mb-4 text-sm"></div>
+
+        <div class="scroll-container overflow-x-auto rounded-xl shadow-2xl">
+            <table class="min-w-full divide-y divide-gray-700">
+                <thead class="bg-gray-800 sticky top-0">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Título</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Plataformas</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Fecha Estreno</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Género</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">📌 Notas (Editable)</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">❌</th>
+                    </tr>
+                </thead>
+                <tbody id="game-table-body" class="bg-gray-900 divide-y divide-gray-700">
+                    <!-- Las filas de juegos se insertarán aquí -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MÓDULOS DE FIREBASE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query, addDoc, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Establecer nivel de log para depuración de Firestore
+        setLogLevel('Debug');
+
+        // --- Configuración e Inicialización de Firebase (NO EDITAR) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db;
+        let auth;
+        let userId = 'default-user'; // Inicialización por defecto
+        let gamesData = [];
+
+        // Datos iniciales de juegos importantes (Octubre 2025 y adelante, basándonos en la búsqueda)
+        const initialGames = [
+            { id: '1', title: "Vampire: The Masquerade – Bloodlines 2", platforms: "PC, PS5, XSX", releaseDate: "21 Oct 2025", genre: "RPG", notes: "¡El más esperado! Revisar requisitos." },
+            { id: '2', title: "Battlefield 6", platforms: "PC, PS5, XSX", releaseDate: "10 Oct 2025", genre: "FPS Táctico", notes: "Beta a finales de septiembre." },
+            { id: '3', title: "Jurassic World Evolution 3", platforms: "PC, PS5, XSX", releaseDate: "21 Oct 2025", genre: "Tycoon/Estrategia", notes: "Para los fans de la gestión." },
+            { id: '4', title: "Ninja Gaiden 4", platforms: "PC, PS5, XSX", releaseDate: "21 Oct 2025", genre: "Action-Adventure", notes: "Saga clásica de acción." },
+            { id: '5', title: "Super Mario Galaxy 1 & 2 Remastered", platforms: "NS, NS2", releaseDate: "2 Oct 2025", genre: "Plataformas", notes: "Clásicos de Wii." },
+            { id: '6', title: "Hades II", platforms: "Win, NS, PS5", releaseDate: "Sep 2025 (Early Access)", genre: "Roguelite", notes: "Acceso anticipado." },
+            { id: '7', title: "Sid Meier's Civilization VII", platforms: "PC, PS5, XSX, NS", releaseDate: "Feb 2025", genre: "Estrategia 4X", notes: "El nuevo gran Civilization." },
+            { id: '8', title: "Elden Ring: Nightreign (Expansión)", platforms: "PC, PS5, XSX, PS4, XBO", releaseDate: "30 May 2025", genre: "Action RPG", notes: "Nueva gran expansión." },
+            { id: '9', title: "Mafia: The Old Country", platforms: "PC, PS5, XSX", releaseDate: "7 Aug 2025", genre: "Action-Adventure", notes: "Precuela ambientada en Italia." },
+        ];
+
+        // Función de utilidad para manejar errores
+        function displayError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = `Error: ${message}`;
+            errorElement.classList.remove('hidden');
+            setTimeout(() => errorElement.classList.add('hidden'), 8000);
+            console.error(message);
+        }
+
+        // --- 1. Inicialización y Autenticación de Firebase ---
+        async function initFirebase() {
+            try {
+                if (firebaseConfig) {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    // Autenticación con el token inicial o anónima
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    
+                    // Obtener el ID del usuario actual
+                    userId = auth.currentUser?.uid || crypto.randomUUID();
+                    document.getElementById('user-id-display').textContent = userId;
+
+                    // Iniciar la escucha de datos
+                    listenForGames();
+
+                } else {
+                    displayError("Configuración de Firebase no disponible. La aplicación funcionará, pero los datos no serán persistentes.");
+                    // Cargar datos iniciales en modo no persistente
+                    gamesData = initialGames.map(g => ({ ...g, id: g.id || crypto.randomUUID() }));
+                    renderTable(gamesData);
+                }
+            } catch (e) {
+                displayError(`Fallo en la inicialización de Firebase: ${e.message}`);
+                // Fallback a datos iniciales si Firebase falla
+                gamesData = initialGames.map(g => ({ ...g, id: g.id || crypto.randomUUID() }));
+                renderTable(gamesData);
+            }
+        }
+
+        // --- 2. Rutas y Almacenamiento de Datos ---
+        
+        // Define la ruta de la colección de datos privada para este usuario
+        function getGamesCollectionRef() {
+            if (!db) return null;
+            // Ruta privada: /artifacts/{appId}/users/{userId}/game_launch_data
+            const collectionPath = `artifacts/${appId}/users/${userId}/game_launch_data`;
+            return collection(db, collectionPath);
+        }
+
+        // Función para verificar y cargar datos iniciales si la colección está vacía
+        async function checkAndLoadInitialData() {
+            try {
+                const q = query(getGamesCollectionRef());
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    console.log("No hay datos en Firestore. Cargando datos iniciales.");
+                    // Añadir los datos iniciales a Firestore
+                    for (const game of initialGames) {
+                        const newDocRef = doc(getGamesCollectionRef());
+                        await setDoc(newDocRef, { ...game, createdAt: new Date().toISOString() });
+                    }
+                } else {
+                    console.log("Datos encontrados en Firestore. Saltando carga inicial.");
+                }
+            } catch (e) {
+                console.error("Error al verificar/cargar datos iniciales:", e);
+                displayError("No se pudieron cargar los datos iniciales en Firestore. Revisa la consola.");
+            }
+        }
+
+        // --- 3. CRUD (Create, Read, Update, Delete) ---
+
+        // Escucha en tiempo real de la colección de juegos
+        function listenForGames() {
+            if (!getGamesCollectionRef()) return;
+
+            const loadingIndicator = document.getElementById('loading-indicator');
+            loadingIndicator.classList.remove('hidden');
+
+            const q = query(getGamesCollectionRef());
+            
+            // onSnapshot es la clave para la reactividad en tiempo real
+            onSnapshot(q, (snapshot) => {
+                loadingIndicator.classList.add('hidden');
+                
+                // Verificar si es la primera carga para intentar cargar los datos iniciales
+                if (snapshot.metadata.hasPendingWrites === false && snapshot.docs.length === 0) {
+                    checkAndLoadInitialData();
+                    return; // Esperar el nuevo snapshot con los datos iniciales
+                }
+
+                // Mapear los documentos a un array de objetos
+                gamesData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                // Ordenar por fecha de lanzamiento
+                gamesData.sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+
+                // Renderizar la tabla con los datos actualizados
+                renderTable(gamesData);
+            }, (error) => {
+                loadingIndicator.classList.add('hidden');
+                displayError(`Error al escuchar datos: ${error.message}`);
+            });
+        }
+        
+        // Función global para añadir una nueva fila (llamada desde el botón)
+        window.addNewRow = async function() {
+            const newGame = {
+                title: "Nuevo Título (Editable)",
+                platforms: "PC, Consola",
+                releaseDate: "Pendiente",
+                genre: "Indefinido",
+                notes: "Escribe aquí tus notas personales.",
+                createdAt: new Date().toISOString()
+            };
+
+            if (db) {
+                try {
+                    await addDoc(getGamesCollectionRef(), newGame);
+                } catch (e) {
+                    displayError(`Fallo al añadir documento: ${e.message}`);
+                }
+            } else {
+                 // Si Firebase no está activo, añadir a la lista local
+                const tempId = crypto.randomUUID();
+                gamesData.push({...newGame, id: tempId});
+                renderTable(gamesData);
+            }
+        }
+
+        // Función global para actualizar un documento (llamada desde la tabla)
+        window.updateGameField = async function(docId, field, value) {
+            if (!db) return console.log("Modo no persistente: El cambio no se guardará.");
+
+            try {
+                const docRef = doc(getGamesCollectionRef(), docId);
+                await setDoc(docRef, { [field]: value }, { merge: true });
+                console.log(`Documento ${docId} actualizado: ${field} = ${value}`);
+            } catch (e) {
+                displayError(`Fallo al actualizar campo: ${e.message}`);
+            }
+        }
+        
+        // Función global para eliminar una fila (llamada desde el botón ❌)
+        window.deleteGameRow = async function(docId) {
+            if (db) {
+                try {
+                    const docRef = doc(getGamesCollectionRef(), docId);
+                    await deleteDoc(docRef);
+                } catch (e) {
+                    displayError(`Fallo al eliminar documento: ${e.message}`);
+                }
+            } else {
+                 // Si Firebase no está activo, eliminar de la lista local
+                gamesData = gamesData.filter(g => g.id !== docId);
+                renderTable(gamesData);
+            }
+        }
+
+        // --- 4. Renderizado y Filtrado de la UI ---
+        
+        // Renderiza el contenido de la tabla basado en los datos filtrados/actualizados
+        function renderTable(dataToRender) {
+            const tableBody = document.getElementById('game-table-body');
+            tableBody.innerHTML = ''; // Limpiar la tabla
+
+            if (dataToRender.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">No se encontraron juegos que coincidan con la búsqueda.</td></tr>`;
+                return;
+            }
+
+            dataToRender.forEach(game => {
+                const row = document.createElement('tr');
+                row.classList.add('data-row', 'transition', 'duration-150');
+
+                // Función para crear celdas editables y con evento onblur
+                const createEditableCell = (field, content) => {
+                    const cell = document.createElement('td');
+                    cell.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-sm', 'font-medium');
+                    cell.setAttribute('contenteditable', 'true');
+                    cell.textContent = content;
+                    
+                    // Evento para guardar el dato cuando el usuario deja de editar
+                    cell.onblur = (e) => {
+                        window.updateGameField(game.id, field, e.target.textContent.trim());
+                    };
+                    return cell;
+                };
+
+                // Columna 1: Título (Editable)
+                row.appendChild(createEditableCell('title', game.title));
+
+                // Columna 2: Plataformas (Editable)
+                row.appendChild(createEditableCell('platforms', game.platforms));
+                
+                // Columna 3: Fecha Estreno (Editable)
+                row.appendChild(createEditableCell('releaseDate', game.releaseDate));
+
+                // Columna 4: Género (Editable)
+                row.appendChild(createEditableCell('genre', game.genre));
+
+                // Columna 5: Notas (Editable - Tu columna de información extra)
+                row.appendChild(createEditableCell('notes', game.notes));
+
+                // Columna 6: Botón Eliminar
+                const deleteCell = document.createElement('td');
+                deleteCell.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-right', 'text-sm', 'font-medium');
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '❌';
+                deleteButton.classList.add('text-lg', 'hover:text-red-500', 'transition', 'duration-150');
+                deleteButton.onclick = () => window.deleteGameRow(game.id);
+                deleteButton.title = 'Eliminar fila';
+                deleteCell.appendChild(deleteButton);
+                row.appendChild(deleteCell);
+
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Función global para filtrar la tabla (llamada desde el input)
+        window.filterTable = function() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                renderTable(gamesData); // Si no hay búsqueda, renderizar todos
+                return;
+            }
+
+            const filteredData = gamesData.filter(game => {
+                // Filtra si el término coincide en el título o las plataformas
+                const titleMatch = game.title.toLowerCase().includes(searchTerm);
+                const platformMatch = game.platforms.toLowerCase().includes(searchTerm);
+                return titleMatch || platformMatch;
+            });
+
+            renderTable(filteredData);
+        }
+
+
+        // --- Inicialización al cargar la página ---
+        initFirebase();
+
+    </script>
+</body>
+</html>

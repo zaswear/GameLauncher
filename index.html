@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -7,25 +6,15 @@
     <title>GameLauncher Pro: Dinámico 🚀</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Fuentes de Google para una mejor tipografía */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-
-        /* Estilo personalizado para la tabla y el scroll */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0d1117; /* Fondo oscuro tipo GitHub */
+            background-color: #0d1117;
             color: #e6e6e6;
-            padding: 0;
-            margin: 0;
-        }
-        [contenteditable]:focus {
-            outline: 2px solid #5778ff;
-            background-color: #1a222c;
-            border-radius: 4px;
         }
         .title-cell {
             cursor: pointer;
-            color: #818cf8; /* Indigo 400 */
+            color: #818cf8;
             font-weight: bold;
             transition: color 0.2s ease-in-out;
         }
@@ -42,7 +31,6 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Estilos para filtros y destacados */
         .filter-btn { transition: all 0.2s ease-in-out; }
         .filter-btn.active {
             background-color: #4f46e5;
@@ -56,6 +44,11 @@
             transform: translateY(-5px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
+        /* Animation for Modal */
+        .modal-enter { animation: fadeIn 0.3s ease-out; }
+        .modal-leave { animation: fadeOut 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -65,12 +58,12 @@
             <h1 class="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 mb-2">
                 🚀 GameLauncher Pro
             </h1>
-            <p class="text-gray-400">Tu radar de próximos lanzamientos. ID de Sesión: <span id="user-id-display" class="font-mono text-xs bg-gray-700 px-2 py-0.5 rounded">Cargando...</span></p>
+            <p class="text-gray-400">Tu radar de próximos lanzamientos.</p>
         </header>
 
         <section id="featured-section" class="mb-10">
-            <h2 class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6">
-                🔥 Destacados de Octubre
+            <h2 id="featured-title" class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6">
+                🔥 Destacados del Mes
             </h2>
             <div id="featured-games-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div id="featured-loading" class="text-center col-span-full py-10 text-lg text-indigo-400">
@@ -87,9 +80,6 @@
                 <button id="refresh-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold p-3 rounded-lg shadow-lg transition duration-200" onclick="refreshData()">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5M12 4V2M12 22v-2M4 12H2M22 12h-2" /></svg>
                 </button>
-                <button id="add-row-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-200 flex items-center gap-2" onclick="addNewRow()">
-                    <span>Añadir Juego</span>
-                </button>
             </div>
         </div>
         
@@ -105,7 +95,7 @@
             <table class="min-w-full divide-y divide-gray-700">
                 <thead class="bg-gray-800 sticky top-0">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Título (Click p/ Detalles)</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Título</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Plataformas</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Fecha Estreno</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Género</th>
@@ -121,94 +111,97 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, query, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        let allGamesData = [];
+        // Filtra por defecto por el mes actual
+        let activeMonthFilter = new Date().getMonth() + 1;
 
-        // --- ESTADO GLOBAL DE LA APLICACIÓN ---
-        let db, auth;
-        let userId = 'local-user';
-        let allGamesData = []; // Contiene todos los juegos de la "API"
-        let activeDetailsId = null;
-        let activeMonthFilter = 0; // 0 para 'Todos'
-        
-        // --- SIMULACIÓN DE API / BASE DE DATOS ---
-        function getMockDatabase() {
-            // Datos de juegos con la propiedad 'isFeatured' para los más esperados del mes actual
-            return [
-                 { id: 'g002', title: "Silent Hill 2", platforms: "PC, PS5", releaseDate: "08 Oct 2025", genre: "Survival Horror", notes: "Remake del clásico de terror psicológico por Bloober Team.", isFeatured: true, imageUrl: "https://image.api.playstation.com/vulcan/ap/rnd/202405/2021/82e425a72f7a050f555d787720235955b253c51b7593c662.jpg", steamLink: "https://store.steampowered.com/app/2124490/SILENT_HILL_2/", ps5Link: "https://store.playstation.com/es-es/concept/10005329", xboxLink: null },
-                 { id: 'g001', title: "Black Ops 6", platforms: "PC, PS5, XSX, PS4, XBO", releaseDate: "25 Oct 2025", genre: "FPS", notes: "Regreso de la saga Black Ops, ambientado en la Guerra del Golfo.", isFeatured: true, imageUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co7m3u.jpg", steamLink: "https://store.steampowered.com/app/1962663/Call_of_Duty_Black_Ops_6/", ps5Link: "https://store.playstation.com/es-es/concept/10005574", xboxLink: "https://www.xbox.com/es-es/games/store/call-of-duty-black-ops-6/9P2S135G0X5C" },
-                 { id: 'g003', title: "New World: Aeternum", platforms: "PS5, XSX", releaseDate: "15 Oct 2025", genre: "MMORPG", notes: "Versión para consolas del MMO de Amazon.", isFeatured: false, imageUrl: "https://image.api.playstation.com/vulcan/ap/rnd/202405/2916/e69312b9385f2693722e03504859f7c462b531a7c784260f.jpg", ps5Link: "https://store.playstation.com/es-es/concept/10010375", xboxLink: "https://www.xbox.com/es-ES/games/store/new-world-aeternum-deluxe-edition/9P9D7G51B923" },
-                 { id: 'g004', title: "Assassin's Creed Shadows", platforms: "PC, PS5, XSX", releaseDate: "15 Nov 2025", genre: "Action RPG", notes: "Ambientado en el Japón Feudal.", isFeatured: true, imageUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co7g6h.jpg", ps5Link: "https://store.playstation.com/es-es/concept/10008947", xboxLink: "https://www.xbox.com/es-ES/games/store/assassins-creed-shadows/9P36814M9H2D" },
-                 { id: 'g005', title: "Grand Theft Auto VI", platforms: "PS5, XSX", releaseDate: "Otoño 2025", genre: "Action-Adventure", notes: "El juego más esperado de la década.", isFeatured: false, imageUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co7d26.jpg" },
-                 { id: 'g007', title: "STALKER 2", platforms: "PC, XSX", releaseDate: "05 Dic 2025", genre: "FPS Survival", notes: "Exploración post-apocalíptica en Chernóbil.", isFeatured: false, imageUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co6kvk.jpg", steamLink: "https://store.steampowered.com/app/1643320/STALKER_2_Heart_of_Chornobyl/", xboxLink: "https://www.xbox.com/es-es/games/store/s-t-a-l-k-e-r-2-heart-of-chornobyl/9p2v5f733z2n"},
-                 { id: 'g020', title: "DOOM: The Dark Ages", platforms: "PC, PS5, XSX", releaseDate: "TBA 2025", genre: "FPS", notes: "Precuela de DOOM (2016) con ambientación medieval.", isFeatured: false, imageUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co7jbs.jpg", steamLink: "https://store.steampowered.com/app/2733980/DOOM_The_Dark_Areas/", ps5Link: "https://store.playstation.com/es-es/concept/10010419" },
-                 { id: 'g012', title: "Monster Hunter Wilds", platforms: "PC, PS5, XSX", releaseDate: "TBA 2026", genre: "Action RPG", notes: "La próxima gran entrega de la saga de caza de monstruos.", isFeatured: false, imageUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co76b9.jpg", steamLink: "https://store.steampowered.com/app/2471920/Monster_Hunter_Wilds/", ps5Link: "https://store.playstation.com/es-es/concept/10009139"},
-                 { id: 'g021', title: "Gears of War: E-Day", platforms: "PC, XSX", releaseDate: "TBA 2026", genre: "Shooter", notes: "Precuela que narra los eventos del Día de la Emergencia.", isFeatured: false, imageUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co7jbt.jpg", xboxLink: "https://www.xbox.com/es-es/games/gears-of-war-e-day"},
-                 // Añadir más juegos aquí si se desea
-            ];
-        }
-
-        // Simula una llamada a una API
+        // --- LÓGICA PRINCIPAL DE OBTENCIÓN DE DATOS ---
         async function fetchGamesFromAPI() {
-                const response = await fetch('/api/getGames'); // ¡Así de simple!
+            try {
+                const response = await fetch('/api/getGames');
                 if (!response.ok) {
-                    // Manejar errores
-                    console.error("Error al obtener datos del backend");
-                    return [];
+                    const errorData = await response.json();
+                    throw new Error(`Error del servidor: ${response.status} - ${errorData.details || errorData.message}`);
                 }
                 const realData = await response.json();
-                return realData.map(game => ({
-                    id: game.id,
-                    title: game.name,
-                    imageUrl: game.cover.url.replace('t_thumb', 't_cover_big'), // Ajustar tamaño de imagen
-                    platforms: game.platforms.map(p => p.abbreviation).join(', '),
-                    releaseDate: new Date(game.first_release_date * 1000).toLocaleDateString(),
-                    genre: 'N/A', // La API podría no darlo en la primera llamada
-                    notes: game.summary,
-                }));
+                
+                // --- MAPEO SEGURO DE DATOS (EVITA CRASHES) ---
+                return realData.map(game => {
+                    // Si 'cover' no existe, o 'url' no existe, usa una imagen por defecto
+                    const imageUrl = game.cover?.url?.replace('t_thumb', 't_cover_big') || 'https://via.placeholder.com/300x400.png?text=Sin+Imagen';
+                    const platforms = game.platforms?.map(p => p.abbreviation).join(', ') || 'N/D';
+                    const releaseDate = game.first_release_date ? new Date(game.first_release_date * 1000) : null;
+                    const genres = game.genres?.map(g => g.name).join(', ') || 'Indefinido';
+                    
+                    return {
+                        id: game.id,
+                        title: game.name || 'Título Desconocido',
+                        imageUrl: imageUrl,
+                        platforms: platforms,
+                        releaseDate: releaseDate, // Se mantiene como objeto Date para poder filtrar
+                        releaseDateString: releaseDate ? releaseDate.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Por anunciar',
+                        genre: genres,
+                        notes: game.summary || 'Sin descripción disponible.',
+                        isFeatured: (game.hypes || 0) > 40 // Destaca juegos con más de 40 'hypes'
+                    };
+                });
+            } catch (error) {
+                console.error("Error fatal al obtener los juegos:", error);
+                const errorElement = document.getElementById('error-message');
+                errorElement.textContent = `No se pudieron cargar los datos. ${error.message}`;
+                errorElement.classList.remove('hidden');
+                // Oculta los spinners si hay un error
+                document.getElementById('featured-loading').style.display = 'none';
+                document.getElementById('table-loading').style.display = 'none';
+                return []; // Devuelve un array vacío para que la app no se rompa
+            }
         }
         
-        // --- LÓGICA DE RENDERIZADO Y FILTROS ---
-
+        // --- RENDERIZADO DE LA INTERFAZ ---
         function renderFeaturedGames(games) {
             const container = document.getElementById('featured-games-container');
+            const featuredGames = games.filter(g => g.isFeatured);
+            
             document.getElementById('featured-loading').style.display = 'none';
             container.innerHTML = '';
             
-            const featuredGames = games.filter(g => g.isFeatured);
-            if(featuredGames.length === 0) {
-                 container.innerHTML = `<p class="col-span-full text-center text-gray-500">No hay juegos destacados este mes.</p>`;
-                 return;
+            if (featuredGames.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500">No se encontraron juegos destacados con alta expectación.</p>`;
+                return;
             }
 
-            featuredGames.forEach(game => {
+            featuredGames.slice(0, 3).forEach(game => { // Muestra un máximo de 3
                 const card = document.createElement('div');
-                card.className = 'featured-card bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700';
+                card.className = 'featured-card bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700 cursor-pointer';
                 card.innerHTML = `
                     <img src="${game.imageUrl}" alt="${game.title}" class="w-full h-48 object-cover">
                     <div class="p-4">
-                        <h3 class="text-xl font-bold text-white">${game.title}</h3>
+                        <h3 class="text-xl font-bold text-white truncate">${game.title}</h3>
                         <p class="text-sm text-gray-400">${game.platforms}</p>
-                        <p class="text-md font-semibold text-indigo-400 mt-2">${game.releaseDate}</p>
+                        <p class="text-md font-semibold text-indigo-400 mt-2">${game.releaseDateString}</p>
                     </div>
                 `;
+                card.onclick = () => toggleDetails(game.id);
                 container.appendChild(card);
             });
         }
         
         function renderMonthFilters() {
             const container = document.getElementById('month-filters');
-            container.innerHTML = '';
             const months = ['Todos', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long' });
+            document.getElementById('featured-title').textContent = `🔥 Destacados de ${currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)}`;
+
+            container.innerHTML = '';
             months.forEach((month, index) => {
                 const btn = document.createElement('button');
                 btn.textContent = month;
-                btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600 ${index === activeMonthFilter ? 'active' : ''}`;
+                btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600`;
+                if (index === activeMonthFilter) {
+                    btn.classList.add('active');
+                }
                 btn.onclick = () => {
                     activeMonthFilter = index;
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
                     applyFilters();
                 };
                 container.appendChild(btn);
@@ -228,7 +221,7 @@
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm title-cell">${game.title}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.platforms}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.releaseDate}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.releaseDateString}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.genre}</td>
                 `;
                 row.querySelector('.title-cell').onclick = () => toggleDetails(game.id);
@@ -236,28 +229,16 @@
             });
         }
 
-        window.applyFilters = function() {
+        // --- FILTROS Y EVENTOS ---
+        function applyFilters() {
             let filteredGames = [...allGamesData];
 
-            // 1. Filtrar por mes
-            if (activeMonthFilter > 0) {
-                const monthMap = { 'Ene': 0, 'Feb': 1, 'Mar': 2, 'Abr': 3, 'May': 4, 'Jun': 5, 'Jul': 6, 'Ago': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dic': 11 };
-                const seasonMap = { 'Otoño': [8, 9, 10] }; // Sep, Oct, Nov
-
+            if (activeMonthFilter > 0) { // 0 es 'Todos'
                 filteredGames = filteredGames.filter(game => {
-                    const dateStr = game.releaseDate.toLowerCase();
-                    const targetMonth = activeMonthFilter - 1;
-
-                    for(const season in seasonMap) {
-                        if(dateStr.includes(season.toLowerCase()) && seasonMap[season].includes(targetMonth)) return true;
-                    }
-                    
-                    const date = new Date(dateStr);
-                    return !isNaN(date) && date.getMonth() === targetMonth;
+                    return game.releaseDate && game.releaseDate.getMonth() === activeMonthFilter - 1;
                 });
             }
 
-            // 2. Filtrar por texto de búsqueda
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             if (searchTerm) {
                 filteredGames = filteredGames.filter(game =>
@@ -266,51 +247,55 @@
                     game.genre.toLowerCase().includes(searchTerm)
                 );
             }
+            
+            document.querySelectorAll('#month-filters .filter-btn').forEach((btn, index) => {
+                btn.classList.toggle('active', index === activeMonthFilter);
+            });
 
             renderTable(filteredGames);
         }
-        
-        // --- PANEL DE DETALLES Y ACCIONES ---
+        window.applyFilters = applyFilters;
         
         function toggleDetails(gameId) {
             const detailsPanel = document.getElementById('details-panel');
             const game = allGamesData.find(g => g.id === gameId);
-            if (!game) return;
 
-            if (detailsPanel.classList.contains('hidden')) {
+            if (!gameId || detailsPanel.classList.contains('active')) {
+                detailsPanel.classList.add('modal-leave');
+                setTimeout(() => {
+                    detailsPanel.classList.add('hidden');
+                    detailsPanel.classList.remove('modal-leave', 'active');
+                    detailsPanel.innerHTML = '';
+                }, 300);
+            } else if (game) {
                 detailsPanel.innerHTML = `
-                    <div class="relative w-full max-w-4xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 animate-fade-in">
-                        <button onclick="toggleDetails()" class="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+                    <div class="relative w-full max-w-4xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
+                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="md:col-span-1"><img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg"></div>
-                            <div class="md:col-span-2 flex flex-col space-y-4">
+                            <div class="md:col-span-1"><img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full"></div>
+                            <div class="md:col-span-2 flex flex-col space-y-3">
                                 <h2 class="text-3xl font-bold text-indigo-400">${game.title}</h2>
-                                <p class="text-gray-300"><span class="font-bold">Plataformas:</span> ${game.platforms}</p>
-                                <p class="text-gray-300"><span class="font-bold">Fecha:</span> ${game.releaseDate}</p>
-                                <p class="text-gray-300"><span class="font-bold">Género:</span> ${game.genre}</p>
-                                <p class="text-gray-400 italic mt-2">${game.notes}</p>
-                                <div class="grid grid-cols-2 gap-2 pt-4 border-t border-gray-700">
-                                    ${game.steamLink ? `<a href="${game.steamLink}" target="_blank" class="bg-gray-700 hover:bg-blue-800 p-2 rounded text-center">Steam</a>` : ''}
-                                    ${game.ps5Link ? `<a href="${game.ps5Link}" target="_blank" class="bg-gray-700 hover:bg-blue-600 p-2 rounded text-center">PlayStation</a>` : ''}
-                                    ${game.xboxLink ? `<a href="${game.xboxLink}" target="_blank" class="bg-gray-700 hover:bg-green-700 p-2 rounded text-center">Xbox</a>` : ''}
-                                </div>
+                                <p><span class="font-bold text-gray-300">Plataformas:</span> ${game.platforms}</p>
+                                <p><span class="font-bold text-gray-300">Fecha:</span> ${game.releaseDateString}</p>
+                                <p><span class="font-bold text-gray-300">Género:</span> ${game.genre}</p>
+                                <p class="text-gray-400 italic pt-2 border-t border-gray-700">${game.notes}</p>
                             </div>
                         </div>
                     </div>
                 `;
                 detailsPanel.classList.remove('hidden');
-            } else {
-                detailsPanel.classList.add('hidden');
-                detailsPanel.innerHTML = '';
+                detailsPanel.classList.add('active');
+                detailsPanel.onclick = () => toggleDetails(); // Cierra el modal si se hace clic en el fondo
             }
         }
-        window.toggleDetails = toggleDetails; // Exponer al scope global
+        window.toggleDetails = toggleDetails;
 
-        window.refreshData = async function() {
+        async function refreshData() {
             document.getElementById('featured-loading').style.display = 'block';
             document.getElementById('table-loading').style.display = 'block';
             document.getElementById('featured-games-container').innerHTML = '';
             document.getElementById('game-table-body').innerHTML = '';
+            document.getElementById('error-message').classList.add('hidden');
             
             allGamesData = await fetchGamesFromAPI();
             
@@ -318,11 +303,12 @@
             renderFeaturedGames(allGamesData);
             applyFilters();
         };
+        window.refreshData = refreshData;
 
-        // --- INICIALIZACIÓN ---
-        async function main() {
+        // --- INICIALIZACIÓN DE LA APP ---
+        function main() {
             renderMonthFilters();
-            await refreshData();
+            refreshData();
         }
 
         main();

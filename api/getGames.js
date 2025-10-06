@@ -17,17 +17,14 @@ export default async function handler(request, response) {
         const startOfYearInSeconds = Math.floor(startOfYear.getTime() / 1000);
         const endOfYearInSeconds = Math.floor(endOfYear.getTime() / 1000);
         
-        const commonFields = "fields name, cover.url, platforms.abbreviation, first_release_date, summary, genres.name, hypes, videos.video_id, videos.name, websites.url, websites.category;";
-        
-        // --- LA CORRECCIÓN ESTÁ AQUÍ ---
-        // Se ha eliminado el punto y coma (;) al final de esta línea.
-        const commonFilters = `where category = 0 & first_release_date >= ${startOfYearInSeconds} & first_release_date <= ${endOfYearInSeconds} & cover.url != null & platforms = {6,167,169}`;
+        const fields = "fields name, cover.url, platforms.abbreviation, first_release_date, summary, genres.name, hypes, videos.video_id, videos.name, websites.url, websites.category;";
+        const baseQuery = `where category = 0 & first_release_date >= ${startOfYearInSeconds} & first_release_date <= ${endOfYearInSeconds} & cover.url != null & platforms = {6,167,169}`;
 
-        // 1. Query para los juegos más esperados (mainstream)
-        const mainstreamBody = `${commonFields} ${commonFilters}; sort hypes desc; limit 25;`;
+        // Petición 1: Juegos Mainstream (que NO sean indies)
+        const mainstreamBody = `${fields} ${baseQuery} & genres != 32; sort hypes desc; limit 25;`;
         
-        // 2. Query específica para los juegos Indie más esperados (género ID 32 es "Indie")
-        const indieBody = `${commonFields} ${commonFilters} & genres = 32; sort hypes desc; limit 25;`;
+        // Petición 2: Juegos Indie (género ID 32)
+        const indieBody = `${fields} ${baseQuery} & genres = 32; sort hypes desc; limit 25;`;
 
         const fetchIGDB = (body) => fetch("https://api.igdb.com/v4/games", {
             method: 'POST',
@@ -40,9 +37,7 @@ export default async function handler(request, response) {
             fetchIGDB(indieBody)
         ]);
 
-        if (!mainstreamResponse.ok || !indieResponse.ok) {
-            throw new Error(`Fallo al obtener datos de IGDB.`);
-        }
+        if (!mainstreamResponse.ok || !indieResponse.ok) throw new Error(`Fallo al obtener datos de IGDB.`);
 
         const mainstreamGames = await mainstreamResponse.json();
         const indieGames = await indieResponse.json();

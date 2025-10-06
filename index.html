@@ -19,6 +19,9 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .modal-leave { animation: fadeOut 0.3s ease-out; }
         @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+        .metascore-good { background-color: #6c3; color: white; }
+        .metascore-average { background-color: #fc3; color: white; }
+        .metascore-bad { background-color: #f00; color: white; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -30,22 +33,17 @@
             </h1>
             <p id="current-date" class="text-gray-400 font-semibold"></p>
         </header>
-
         <section id="featured-section" class="mb-10">
-            <h2 id="featured-title" class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6">
-                
-            </h2>
+            <h2 id="featured-title" class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6"></h2>
             <div id="featured-games-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                 <div id="featured-loading" class="text-center col-span-full py-10 text-lg text-indigo-400">
                     Consultando lanzamientos... <span class="spinner inline-block ml-2"></span>
                 </div>
             </div>
         </section>
-        
         <h3 class="text-xl md:text-2xl font-bold text-gray-200 border-b-2 border-gray-700 pb-2 mb-6">
             Catálogo Completo
         </h3>
-
         <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <input type="text" id="search-input" placeholder="Buscar en el catálogo..."
                    class="w-full md:w-auto p-3 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition duration-200"
@@ -56,7 +54,6 @@
                 </button>
             </div>
         </div>
-        
         <div id="month-filters" class="mb-6 flex flex-wrap gap-2 justify-center p-3 bg-gray-800 rounded-lg"></div>
         <div id="error-message" class="hidden bg-red-800 p-4 rounded-lg mb-4 text-sm"></div>
         <div class="scroll-container overflow-x-auto rounded-xl shadow-2xl border border-gray-700">
@@ -85,20 +82,89 @@
                 if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
                 const data = await response.json();
                 
-                return data.map(game => {
-                    const releaseDate = game.releaseDate ? new Date(game.releaseDate) : null;
-                    return { ...game, releaseDate };
-                });
+                return data.map(game => ({
+                    ...game,
+                    releaseDate: game.releaseDate ? new Date(game.releaseDate) : null,
+                }));
             } catch (error) {
                 console.error("Error al obtener los juegos:", error);
-                const errorElement = document.getElementById('error-message');
-                errorElement.textContent = `No se pudieron cargar los datos. ${error.message}`;
-                errorElement.classList.remove('hidden');
+                document.getElementById('error-message').textContent = `No se pudieron cargar los datos. ${error.message}`;
+                document.getElementById('error-message').classList.remove('hidden');
                 return [];
             }
         }
         
-        // --- FUNCIÓN MODIFICADA PARA LANZAMIENTOS DE HOY ---
+        // --- FUNCIÓN DE RENDERIZADO DEL MODAL (ACTUALIZADA) ---
+        function getMetacriticHtml(score) {
+            if (!score) return '';
+            
+            let scoreClass = 'metascore-average';
+            if (score >= 75) scoreClass = 'metascore-good';
+            if (score < 50) scoreClass = 'metascore-bad';
+
+            return `
+                <div class="flex items-center gap-2">
+                    <svg class="w-6 h-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="50" fill="#242424"/>
+                        <path d="M78.62 21.38V78.62H21.38V21.38H78.62ZM87.5 12.5H12.5V87.5H87.5V12.5Z" fill="white"/>
+                        <path d="M45.56 65.5V36.68H38.3V30H61.7V36.68H54.44V65.5H45.56Z" fill="white"/>
+                    </svg>
+                    <span class="font-bold text-gray-300">Metacritic</span>
+                    <span class="font-bold text-lg px-2 rounded ${scoreClass}">${score}</span>
+                </div>
+            `;
+        }
+        
+        function toggleDetails(gameId) {
+            const detailsPanel = document.getElementById('details-panel');
+            const game = allGamesData.find(g => g.id === gameId);
+
+            if (!gameId || detailsPanel.classList.contains('active')) {
+                detailsPanel.classList.add('modal-leave');
+                setTimeout(() => {
+                    detailsPanel.classList.add('hidden');
+                    detailsPanel.classList.remove('modal-leave', 'active');
+                    detailsPanel.innerHTML = '';
+                }, 300);
+            } else if (game) {
+                const mediaElement = game.trailerUrl ?
+                    `<video controls autoplay muted loop class="w-full h-full rounded-lg object-cover">
+                        <source src="${game.trailerUrl}" type="video/mp4">
+                    </video>` :
+                    `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full">`;
+
+                detailsPanel.innerHTML = `
+                    <div class="relative w-full max-w-5xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
+                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <div class="flex-shrink-0 w-full md:w-5/12">
+                                <div class="aspect-w-16 aspect-h-9 mb-4 bg-black rounded-lg overflow-hidden">${mediaElement}</div>
+                                <div class="space-y-3">
+                                    ${getMetacriticHtml(game.metacritic)}
+                                    ${game.steamUrl ? `<a href="${game.steamUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 w-full text-center bg-gray-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12.1,2.6c-5.5,0-10,4.2-10,9.4c0,0,0,0,0,0c0,4,2.7,7.4,6.4,8.8l2.1-2.2c-0.8-0.3-1.5-0.8-2.1-1.4 c-1.2-1.3-1.8-3-1.8-4.7c0-3.7,3.3-6.8,7.4-6.8s7.4,3,7.4,6.8c0,1.8-0.7,3.6-2.1,4.9c-0.6,0.6-1.3,1.1-2.1,1.4l2.1,2.2 c3.7-1.4,6.4-4.8,6.4-8.8C22.1,6.8,17.6,2.6,12.1,2.6z M10,12.5c-0.8,0-1.5-0.7-1.5-1.5c0-0.8,0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5 C11.5,11.8,10.8,12.5,10,12.5z M14.2,12.5c-0.8,0-1.5-0.7-1.5-1.5c0-0.8,0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5 C15.7,11.8,15,12.5,14.2,12.5z"/></svg>
+                                        <span>Ver en Steam</span>
+                                    </a>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex-grow">
+                                <h2 class="text-4xl font-bold text-indigo-400 mb-2">${game.title}</h2>
+                                <p class="mb-4 text-lg text-gray-300">${new Date(game.releaseDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric'})}</p>
+                                <p class="mb-4 text-gray-400"><span class="font-bold text-gray-300">Plataformas:</span> ${game.platforms}</p>
+                                <p class="mb-4 text-gray-400"><span class="font-bold text-gray-300">Género:</span> ${game.genre}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                detailsPanel.classList.remove('hidden');
+                detailsPanel.classList.add('active');
+                detailsPanel.onclick = () => toggleDetails();
+            }
+        }
+        window.toggleDetails = toggleDetails;
+
+        // --- El resto de funciones (main, refreshData, renderTable, etc.) no cambian ---
+        // Se incluyen aquí para que el script esté completo.
         function renderFeaturedGames(games) {
             const container = document.getElementById('featured-games-container');
             const titleElement = document.getElementById('featured-title');
@@ -106,7 +172,7 @@
             container.innerHTML = '';
             
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Normalizar a la medianoche para comparar solo la fecha
+            today.setHours(0, 0, 0, 0);
 
             const todayGames = games.filter(g => {
                 if (!g.releaseDate) return false;
@@ -135,38 +201,32 @@
                 container.appendChild(card);
             });
         }
-        
         function renderMonthFilters() {
             const container = document.getElementById('month-filters');
             container.innerHTML = '';
             const now = new Date();
             const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
             const allBtn = document.createElement('button');
             allBtn.textContent = 'Todos';
             allBtn.className = 'filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600';
             if (activeFilter.month === null) allBtn.classList.add('active');
             allBtn.onclick = () => { activeFilter = { month: null, year: null }; applyFilters(); };
             container.appendChild(allBtn);
-
             for (let i = 0; i < 24; i++) {
                 const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
                 const month = date.getMonth();
                 const year = date.getFullYear();
                 const shortYear = `'${String(year).slice(-2)}`;
-                
                 const btn = document.createElement('button');
                 btn.textContent = `${monthNames[month]}${shortYear}`;
                 btn.dataset.month = month;
                 btn.dataset.year = year;
                 btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600`;
                 if(activeFilter.month === month && activeFilter.year === year) btn.classList.add('active');
-                
                 btn.onclick = () => { activeFilter = { month, year }; applyFilters(); };
                 container.appendChild(btn);
             }
         }
-
         function renderTable(games) {
             const tableBody = document.getElementById('game-table-body');
             tableBody.innerHTML = '';
@@ -187,7 +247,6 @@
                 tableBody.appendChild(row);
             });
         }
-
         function applyFilters() {
             let filteredGames = [...allGamesData].sort((a,b) => (a.releaseDate || 0) - (b.releaseDate || 0));
             if (activeFilter.month !== null && activeFilter.year !== null) {
@@ -210,48 +269,6 @@
             renderTable(filteredGames);
         }
         window.applyFilters = applyFilters;
-        
-        function toggleDetails(gameId) {
-            const detailsPanel = document.getElementById('details-panel');
-            const game = allGamesData.find(g => g.id === gameId);
-            if (!gameId || detailsPanel.classList.contains('active')) {
-                detailsPanel.classList.add('modal-leave');
-                setTimeout(() => {
-                    detailsPanel.classList.add('hidden');
-                    detailsPanel.classList.remove('modal-leave', 'active');
-                    detailsPanel.innerHTML = '';
-                }, 300);
-            } else if (game) {
-                let mediaElement = game.trailerUrl ?
-                    `<video controls autoplay muted loop class="w-full h-full rounded">
-                        <source src="${game.trailerUrl}" type="video/mp4">
-                        Tu navegador no soporta el vídeo.
-                    </video>` :
-                    `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full">`;
-
-                detailsPanel.innerHTML = `
-                    <div class="relative w-full max-w-4xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
-                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
-                        <div class="flex flex-col md:flex-row gap-6">
-                            <div class="flex-shrink-0 w-full md:w-1/3">
-                                <div class="aspect-w-16 aspect-h-9 mb-4 bg-black rounded">${mediaElement}</div>
-                                ${game.steamUrl ? `<a href="${game.steamUrl}" target="_blank" rel="noopener noreferrer" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Ver en Steam</a>` : ''}
-                            </div>
-                            <div class="flex-grow">
-                                <h2 class="text-3xl font-bold text-indigo-400 mb-2">${game.title}</h2>
-                                <p class="mb-4"><span class="font-bold text-gray-300">Lanzamiento:</span> ${new Date(game.releaseDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric'})}</p>
-                                <p class="text-sm text-gray-400 italic">${game.notes}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                detailsPanel.classList.remove('hidden');
-                detailsPanel.classList.add('active');
-                detailsPanel.onclick = () => toggleDetails();
-            }
-        }
-        window.toggleDetails = toggleDetails;
-
         async function refreshData() {
             document.getElementById('featured-loading').style.display = 'block';
             document.getElementById('error-message').classList.add('hidden');
@@ -260,7 +277,6 @@
             applyFilters();
         };
         window.refreshData = refreshData;
-
         function main() {
             const dateElement = document.getElementById('current-date');
             const today = new Date();
@@ -268,7 +284,6 @@
             renderMonthFilters();
             refreshData();
         }
-
         main();
     </script>
 </body>

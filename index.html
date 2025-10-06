@@ -197,7 +197,8 @@
         function renderGotyWinners() {
             const container = document.getElementById('goty-container');
             container.innerHTML = '';
-            // Lista estática con los últimos ganadores. No requiere API.
+            
+            // Lista estática con los últimos ganadores y sus imágenes
             const gotyWinners = [
                 { year: 2023, title: "Baldur's Gate 3", imageUrl: 'https://media.rawg.io/media/games/26d/26d4437715bee6063523f28359859f99.jpg' },
                 { year: 2022, title: "Elden Ring", imageUrl: 'https://media.rawg.io/media/games/5ec/5ecac5cb026ec26a56efcc16492b1bed.jpg' },
@@ -218,6 +219,7 @@
                 `;
                 container.appendChild(card);
             });
+        }
         }
         
         // El resto de funciones (renderMonthFilters, renderTable, applyFilters) no tienen cambios

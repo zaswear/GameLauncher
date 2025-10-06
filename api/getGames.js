@@ -6,12 +6,12 @@ export default async function handler(request, response) {
     }
 
     try {
-        // --- CORRECCIÓN DE FECHA: AHORA INCLUYE EL AÑO SIGUIENTE ---
         const now = new Date();
-        const currentYear = now.getFullYear(); // ej: 2025
-        const nextYear = currentYear + 1;    // ej: 2026
-        // Pide juegos desde el 1 de enero del año actual hasta el 31 de diciembre del año siguiente.
-        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${currentYear}-01-01,${nextYear}-12-31&ordering=-added&page_size=40`;
+        const currentYear = now.getFullYear();
+        const nextYear = currentYear + 1;
+        
+        // Aumentamos el tamaño de la página a 60 para tener una selección más amplia
+        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${currentYear}-01-01,${nextYear}-12-31&ordering=-added&page_size=1060`;
 
         const apiResponse = await fetch(url);
 

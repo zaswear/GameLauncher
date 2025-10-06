@@ -37,7 +37,7 @@
 
         <section id="featured-section" class="mb-10">
             <h2 id="featured-title" class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6">
-                🔥 Calendario de Estrenos
+                🔥 Próximos Estrenos
             </h2>
             <div id="featured-games-container" class="horizontal-scroll-container flex overflow-x-auto gap-6 pb-4">
                 <div id="featured-loading" class="text-center w-full py-10 text-lg text-indigo-400">
@@ -77,29 +77,21 @@
 
     <script type="module">
         let allGamesData = [];
-        let activeMonthFilter = 0;
+        let activeFilter = { month: null, year: null }; // Objeto para el nuevo filtro
 
         async function fetchGamesFromAPI() {
             try {
                 const response = await fetch('/api/getGames');
-                if (!response.ok) {
-                    throw new Error(`Error del servidor: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
                 const data = await response.json();
                 
-                return data.map(game => ({
-                    id: game.id,
-                    title: game.title,
-                    imageUrl: game.imageUrl,
-                    platforms: game.platforms,
-                    releaseDate: new Date(game.releaseDate),
-                    releaseDateString: game.releaseDateString,
-                    genre: game.genre,
-                    notes: game.notes,
-                    isFeatured: game.isFeatured, 
-                    steamUrl: game.steamUrl,
-                    trailerUrl: game.trailerUrl
-                }));
+                return data.map(game => {
+                    const releaseDate = game.releaseDate ? new Date(game.releaseDate) : null;
+                    return {
+                        ...game,
+                        releaseDate: releaseDate
+                    };
+                });
             } catch (error) {
                 console.error("Error al obtener los juegos:", error);
                 const errorElement = document.getElementById('error-message');
@@ -112,17 +104,25 @@
         function renderFeaturedGames(games) {
             const container = document.getElementById('featured-games-container');
             container.innerHTML = '';
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const nextMonth = (currentMonth + 1) % 12;
+            const currentYear = now.getFullYear();
+            const yearForNextMonth = nextMonth === 0 ? currentYear + 1 : currentYear;
 
-            const upcomingGames = games
-                .filter(g => g.releaseDate && g.releaseDate >= new Date())
+            const featuredGames = games
+                .filter(g => g.releaseDate && 
+                    ((g.releaseDate.getMonth() === currentMonth && g.releaseDate.getFullYear() === currentYear) || 
+                     (g.releaseDate.getMonth() === nextMonth && g.releaseDate.getFullYear() === yearForNextMonth))
+                )
                 .sort((a, b) => a.releaseDate - b.releaseDate);
 
-            if (upcomingGames.length === 0) {
-                container.innerHTML = `<p class="text-center w-full text-gray-500">No hay próximos lanzamientos destacados en la lista.</p>`;
+            if (featuredGames.length === 0) {
+                container.innerHTML = `<p class="text-center w-full text-gray-500">No hay lanzamientos destacados para este mes o el siguiente.</p>`;
                 return;
             }
 
-            upcomingGames.slice(0, 15).forEach(game => {
+            featuredGames.slice(0, 15).forEach(game => {
                 const card = document.createElement('div');
                 card.className = 'flex-shrink-0 w-48 text-center cursor-pointer transition-transform duration-200 hover:scale-105';
                 card.innerHTML = `
@@ -138,21 +138,46 @@
         function renderMonthFilters() {
             const container = document.getElementById('month-filters');
             container.innerHTML = '';
-            const months = ['Todos', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            months.forEach((index, month) => {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+            // Botón "Todos"
+            const allBtn = document.createElement('button');
+            allBtn.textContent = 'Todos';
+            allBtn.className = 'filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600';
+            if (activeFilter.month === null) allBtn.classList.add('active');
+            allBtn.onclick = () => { activeFilter = { month: null, year: null }; applyFilters(); };
+            container.appendChild(allBtn);
+
+            // Meses restantes de este año y los 12 del siguiente
+            for (let i = 0; i < 24; i++) {
+                const date = new Date(currentYear, currentMonth + i, 1);
+                const month = date.getMonth();
+                const year = date.getFullYear();
+                const shortYear = `'${String(year).slice(-2)}`;
+                
                 const btn = document.createElement('button');
-                btn.textContent = month;
-                btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600 ${index === activeMonthFilter ? 'active' : ''}`;
-                btn.onclick = () => { activeMonthFilter = index; applyFilters(); };
+                btn.textContent = `${monthNames[month]}${shortYear}`;
+                btn.dataset.month = month;
+                btn.dataset.year = year;
+                btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600`;
+                if(activeFilter.month === month && activeFilter.year === year) btn.classList.add('active');
+                
+                btn.onclick = () => { 
+                    activeFilter = { month, year }; 
+                    applyFilters(); 
+                };
                 container.appendChild(btn);
-            });
+            }
         }
 
         function renderTable(games) {
             const tableBody = document.getElementById('game-table-body');
             tableBody.innerHTML = '';
             if (games.length === 0) {
-                 tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos.</td></tr>`;
+                 tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos con los filtros seleccionados.</td></tr>`;
                  return;
             }
             games.forEach(game => {
@@ -171,18 +196,32 @@
 
         function applyFilters() {
             let filteredGames = [...allGamesData].sort((a,b) => (a.releaseDate || 0) - (b.releaseDate || 0));
-            if (activeMonthFilter > 0) {
-                filteredGames = filteredGames.filter(g => g.releaseDate && g.releaseDate.getMonth() === activeMonthFilter - 1);
+            
+            if (activeFilter.month !== null && activeFilter.year !== null) {
+                filteredGames = filteredGames.filter(g => 
+                    g.releaseDate && 
+                    g.releaseDate.getMonth() === activeFilter.month &&
+                    g.releaseDate.getFullYear() === activeFilter.year
+                );
             }
+
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             if (searchTerm) {
                 filteredGames = filteredGames.filter(g => g.title.toLowerCase().includes(searchTerm));
             }
-            document.querySelectorAll('#month-filters .filter-btn').forEach((btn, index) => btn.classList.toggle('active', index === activeMonthFilter));
+
+            document.querySelectorAll('#month-filters .filter-btn').forEach(btn => {
+                const isAllButton = btn.textContent === 'Todos';
+                const isActive = (isAllButton && activeFilter.month === null) || 
+                                 (!isAllButton && parseInt(btn.dataset.month) === activeFilter.month && parseInt(btn.dataset.year) === activeFilter.year);
+                btn.classList.toggle('active', isActive);
+            });
             renderTable(filteredGames);
         }
         window.applyFilters = applyFilters;
         
+        // --- El resto de funciones (toggleDetails, refreshData, main) no necesitan cambios significativos ---
+        // Se pegan aquí para asegurar que el código esté completo
         function toggleDetails(gameId) {
             const detailsPanel = document.getElementById('details-panel');
             const game = allGamesData.find(g => g.id === gameId);
@@ -207,7 +246,7 @@
                         <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
                         <div class="flex flex-col md:flex-row gap-6">
                             <div class="flex-shrink-0 w-full md:w-1/3">
-                                <div class="aspect-w-16 aspect-h-9 mb-4">${mediaElement}</div>
+                                <div class="aspect-w-16 aspect-h-9 mb-4 bg-black rounded">${mediaElement}</div>
                                 ${game.steamUrl ? `<a href="${game.steamUrl}" target="_blank" rel="noopener noreferrer" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Ver en Steam</a>` : ''}
                             </div>
                             <div class="flex-grow">
@@ -227,13 +266,12 @@
 
         async function refreshData() {
             document.getElementById('featured-loading').style.display = 'block';
-            document.getElementById('table-loading').style.display = 'block';
+            document.getElementById('featured-games-container').innerHTML = '';
             document.getElementById('error-message').classList.add('hidden');
             
             allGamesData = await fetchGamesFromAPI();
             
             document.getElementById('featured-loading').style.display = 'none';
-            document.getElementById('table-loading').style.display = 'none';
 
             renderFeaturedGames(allGamesData);
             applyFilters();

@@ -6,9 +6,12 @@ export default async function handler(request, response) {
     }
 
     try {
+        // --- CORRECCIÓN DE FECHA: AHORA INCLUYE EL AÑO SIGUIENTE ---
         const now = new Date();
-        const year = now.getFullYear();
-        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${year}-01-01,${year}-12-31&ordering=-added&page_size=40`;
+        const currentYear = now.getFullYear(); // ej: 2025
+        const nextYear = currentYear + 1;    // ej: 2026
+        // Pide juegos desde el 1 de enero del año actual hasta el 31 de diciembre del año siguiente.
+        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${currentYear}-01-01,${nextYear}-12-31&ordering=-added&page_size=40`;
 
         const apiResponse = await fetch(url);
 
@@ -18,23 +21,19 @@ export default async function handler(request, response) {
 
         const data = await apiResponse.json();
         
-        const games = data.results.map(game => {
-            return {
-                id: game.id,
-                title: game.name,
-                imageUrl: game.background_image,
-                platforms: game.platforms?.map(p => p.platform.name).join(', ') || 'N/D',
-                releaseDate: game.released,
-                releaseDateString: new Date(game.released).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).toUpperCase().replace('.','') || 'TBA',
-                genre: game.genres?.map(g => g.name).join(', ') || 'Indefinido',
-                // Enviamos la puntuación como un campo numérico separado
-                metacritic: game.metacritic || null, 
-                isFeatured: (game.metacritic || 0) > 85, 
-                steamUrl: game.stores?.find(s => s.store.slug === 'steam')?.url,
-                // Usamos el clip de vídeo que proporciona RAWG
-                trailerUrl: game.clip?.clip
-            };
-        });
+        const games = data.results.map(game => ({
+            id: game.id,
+            title: game.name,
+            imageUrl: game.background_image,
+            platforms: game.platforms?.map(p => p.platform.name).join(', ') || 'N/D',
+            releaseDate: game.released,
+            releaseDateString: new Date(game.released).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).toUpperCase().replace('.','') || 'TBA',
+            genre: game.genres?.map(g => g.name).join(', ') || 'Indefinido',
+            metacritic: game.metacritic || null, 
+            isFeatured: (game.metacritic || 0) > 85, 
+            steamUrl: game.stores?.find(s => s.store.slug === 'steam')?.url,
+            trailerUrl: game.clip?.clip
+        }));
 
         response.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
         response.status(200).json(games);

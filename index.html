@@ -150,7 +150,7 @@
                             </div>
                             <div class="flex-grow">
                                 <h2 class="text-4xl font-bold text-indigo-400 mb-2">${game.title}</h2>
-                                <p class="mb-4 text-lg text-gray-300">${new Date(game.releaseDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric'})}</p>
+                                <p class="mb-4 text-lg text-gray-300">${game.releaseDate ? game.releaseDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric'}) : 'Fecha no disponible'}</p>
                                 <p class="mb-4 text-gray-400"><span class="font-bold text-gray-300">Plataformas:</span> ${game.platforms}</p>
                                 <p class="mb-4 text-gray-400"><span class="font-bold text-gray-300">Género:</span> ${game.genre}</p>
                             </div>

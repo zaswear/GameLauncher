@@ -42,6 +42,14 @@
                 </div>
             </div>
         </section>
+        
+        <section id="featured-2026-section" class="mb-10">
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6">
+                ✨ Lo más esperado de 2026
+            </h2>
+            <div id="featured-2026-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                </div>
+        </section>
 
         <h3 class="text-xl md:text-2xl font-bold text-gray-200 border-b-2 border-gray-700 pb-2 mb-6">
             Catálogo Completo
@@ -52,7 +60,7 @@
                    oninput="applyFilters()">
             <div class="flex items-center gap-2">
                 <button id="refresh-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold p-3 rounded-lg shadow-lg transition duration-200" onclick="refreshData()">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5M12 4V2M12 22v-2M4 12H2M22 12h-2" /></svg>
+                    <svg xmlns="http://www.w.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5M12 4V2M12 22v-2M4 12H2M22 12h-2" /></svg>
                 </button>
             </div>
         </div>
@@ -72,6 +80,14 @@
             </table>
         </div>
         <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
+
+        <section id="goty-section" class="mt-12">
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-amber-400 pb-2 mb-6">
+                🏆 Ganadores del Game of the Year
+            </h2>
+            <div id="goty-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                </div>
+        </section>
     </div>
 
     <script type="module">
@@ -79,6 +95,7 @@
         let activeFilter = { month: null, year: null };
 
         async function fetchGamesFromAPI() {
+            // ... (Sin cambios)
             try {
                 const response = await fetch('/api/getGames');
                 if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
@@ -97,186 +114,164 @@
         }
         
         function getMetacriticHtml(score) {
-            if (!score) return '';
-            
+            // ... (Sin cambios)
+             if (!score) return '';
             let scoreClass = 'metascore-average';
             if (score >= 75) scoreClass = 'metascore-good';
             if (score < 50) scoreClass = 'metascore-bad';
-
-            return `
-                <div class="flex items-center gap-2">
-                    <svg class="w-6 h-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="50" cy="50" r="50" fill="#242424"/>
-                        <path d="M78.62 21.38V78.62H21.38V21.38H78.62ZM87.5 12.5H12.5V87.5H87.5V12.5Z" fill="white"/>
-                        <path d="M45.56 65.5V36.68H38.3V30H61.7V36.68H54.44V65.5H45.56Z" fill="white"/>
-                    </svg>
-                    <span class="font-bold text-gray-300">Metacritic</span>
-                    <span class="font-bold text-lg px-2 rounded ${scoreClass}">${score}</span>
-                </div>
-            `;
+            return `<div class="flex items-center gap-2"><svg class="w-6 h-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#242424"/><path d="M78.62 21.38V78.62H21.38V21.38H78.62ZM87.5 12.5H12.5V87.5H87.5V12.5Z" fill="white"/><path d="M45.56 65.5V36.68H38.3V30H61.7V36.68H54.44V65.5H45.56Z" fill="white"/></svg><span class="font-bold text-gray-300">Metacritic</span><span class="font-bold text-lg px-2 rounded ${scoreClass}">${score}</span></div>`;
         }
         
         function toggleDetails(gameId) {
+            // ... (Sin cambios)
             const detailsPanel = document.getElementById('details-panel');
             const game = allGamesData.find(g => g.id === gameId);
-
             if (!gameId || detailsPanel.classList.contains('active')) {
                 detailsPanel.classList.add('modal-leave');
-                setTimeout(() => {
-                    detailsPanel.classList.add('hidden');
-                    detailsPanel.classList.remove('modal-leave', 'active');
-                    detailsPanel.innerHTML = '';
-                }, 300);
+                setTimeout(() => { detailsPanel.classList.add('hidden'); detailsPanel.classList.remove('modal-leave', 'active'); detailsPanel.innerHTML = ''; }, 300);
             } else if (game) {
-                const mediaElement = game.trailerUrl ?
-                    `<video controls autoplay muted loop class="w-full h-full rounded-lg object-cover">
-                        <source src="${game.trailerUrl}" type="video/mp4">
-                    </video>` :
-                    `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full">`;
-
-                detailsPanel.innerHTML = `
-                    <div class="relative w-full max-w-5xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
-                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
-                        <div class="flex flex-col md:flex-row gap-6">
-                            <div class="flex-shrink-0 w-full md:w-5/12">
-                                <div class="aspect-w-16 aspect-h-9 mb-4 bg-black rounded-lg overflow-hidden">${mediaElement}</div>
-                                <div class="space-y-3">
-                                    ${getMetacriticHtml(game.metacritic)}
-                                    ${game.steamUrl ? `<a href="${game.steamUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 w-full text-center bg-gray-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12.1,2.6c-5.5,0-10,4.2-10,9.4c0,0,0,0,0,0c0,4,2.7,7.4,6.4,8.8l2.1-2.2c-0.8-0.3-1.5-0.8-2.1-1.4 c-1.2-1.3-1.8-3-1.8-4.7c0-3.7,3.3-6.8,7.4-6.8s7.4,3,7.4,6.8c0,1.8-0.7,3.6-2.1,4.9c-0.6,0.6-1.3,1.1-2.1,1.4l2.1,2.2 c3.7-1.4,6.4-4.8,6.4-8.8C22.1,6.8,17.6,2.6,12.1,2.6z M10,12.5c-0.8,0-1.5-0.7-1.5-1.5c0-0.8,0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5 C11.5,11.8,10.8,12.5,10,12.5z M14.2,12.5c-0.8,0-1.5-0.7-1.5-1.5c0-0.8,0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5 C15.7,11.8,15,12.5,14.2,12.5z"/></svg>
-                                        <span>Ver en Steam</span>
-                                    </a>` : ''}
-                                </div>
-                            </div>
-                            <div class="flex-grow">
-                                <h2 class="text-4xl font-bold text-indigo-400 mb-2">${game.title}</h2>
-                                <p class="mb-4 text-lg text-gray-300">${game.releaseDate ? game.releaseDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric'}) : 'Fecha no disponible'}</p>
-                                <p class="mb-4 text-gray-400"><span class="font-bold text-gray-300">Plataformas:</span> ${game.platforms}</p>
-                                <p class="mb-4 text-gray-400"><span class="font-bold text-gray-300">Género:</span> ${game.genre}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                detailsPanel.classList.remove('hidden');
-                detailsPanel.classList.add('active');
-                detailsPanel.onclick = () => toggleDetails();
+                const mediaElement = game.trailerUrl ? `<video controls autoplay muted loop class="w-full h-full rounded-lg object-cover"><source src="${game.trailerUrl}" type="video/mp4"></video>` : `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full">`;
+                detailsPanel.innerHTML = `<div class="relative w-full max-w-5xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter" onclick="event.stopPropagation()"><button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button><div class="flex flex-col md:flex-row gap-6"><div class="flex-shrink-0 w-full md:w-5/12"><div class="aspect-w-16 aspect-h-9 mb-4 bg-black rounded-lg overflow-hidden">${mediaElement}</div><div class="space-y-3">${getMetacriticHtml(game.metacritic)}${game.steamUrl ? `<a href="${game.steamUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 w-full text-center bg-gray-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12.1,2.6c-5.5,0-10,4.2-10,9.4c0,0,0,0,0,0c0,4,2.7,7.4,6.4,8.8l2.1-2.2c-0.8-0.3-1.5-0.8-2.1-1.4 c-1.2-1.3-1.8-3-1.8-4.7c0-3.7,3.3-6.8,7.4-6.8s7.4,3,7.4,6.8c0,1.8-0.7,3.6-2.1,4.9c-0.6,0.6-1.3,1.1-2.1,1.4l2.1,2.2 c3.7-1.4,6.4-4.8,6.4-8.8C22.1,6.8,17.6,2.6,12.1,2.6z M10,12.5c-0.8,0-1.5-0.7-1.5-1.5c0-0.8,0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5 C11.5,11.8,10.8,12.5,10,12.5z M14.2,12.5c-0.8,0-1.5-0.7-1.5-1.5c0-0.8,0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5 C15.7,11.8,15,12.5,14.2,12.5z"/></svg><span>Ver en Steam</span></a>` : ''}</div></div><div class="flex-grow"><h2 class="text-4xl font-bold text-indigo-400 mb-2">${game.title}</h2><p class="mb-4 text-lg text-gray-300">${game.releaseDate ? game.releaseDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric'}) : 'Fecha no disponible'}</p><p class="mb-4 text-gray-400"><span class="font-bold text-gray-300">Plataformas:</span> ${game.platforms}</p><p class="mb-4 text-gray-400"><span class="font-bold text-gray-300">Género:</span> ${game.genre}</p></div></div></div>`;
+                detailsPanel.classList.remove('hidden'); detailsPanel.classList.add('active'); detailsPanel.onclick = () => toggleDetails();
             }
         }
         window.toggleDetails = toggleDetails;
 
         function renderFeaturedGames(games) {
+            // ... (Sin cambios)
             const container = document.getElementById('featured-games-container');
             const titleElement = document.getElementById('featured-title');
             document.getElementById('featured-loading').style.display = 'none';
             container.innerHTML = '';
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
+            const today = new Date(); today.setHours(0, 0, 0, 0);
             const todayGames = games.filter(g => {
                 if (!g.releaseDate) return false;
                 const releaseDate = new Date(g.releaseDate);
                 releaseDate.setHours(0, 0, 0, 0);
                 return releaseDate.getTime() === today.getTime();
             });
-
             titleElement.innerHTML = `🔥 Lanzamientos de Hoy <span class="text-indigo-400">(${today.toLocaleDateString('es-ES')})</span>`;
-
             if (todayGames.length === 0) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No hay lanzamientos programados para hoy en la base de datos.</p>`;
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No hay lanzamientos programados para hoy.</p>`;
+                return;
+            }
+            todayGames.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'group relative cursor-pointer';
+                card.innerHTML = `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-72 object-cover transition-transform duration-300 group-hover:scale-105 border-2 border-transparent group-hover:border-indigo-500"><div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent rounded-b-lg"><h3 class="text-sm font-bold text-white truncate transition-colors duration-300 group-hover:text-indigo-300">${game.title}</h3></div>`;
+                card.onclick = () => toggleDetails(game.id);
+                container.appendChild(card);
+            });
+        }
+        
+        // --- NUEVA FUNCIÓN: RENDERIZAR DESTACADOS DE 2026 ---
+        function renderFeatured2026(games) {
+            const container = document.getElementById('featured-2026-container');
+            container.innerHTML = '';
+
+            const games2026 = games
+                .filter(g => g.releaseDate && g.releaseDate.getFullYear() === 2026)
+                .sort((a,b) => (a.releaseDate) - (b.releaseDate)); // Ordenar por fecha
+
+            if (games2026.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500">Aún no hay juegos de 2026 en la lista.</p>`;
                 return;
             }
 
-            todayGames.forEach(game => {
+            games2026.slice(0, 5).forEach(game => {
                 const card = document.createElement('div');
                 card.className = 'group relative cursor-pointer';
                 card.innerHTML = `
                     <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-72 object-cover transition-transform duration-300 group-hover:scale-105 border-2 border-transparent group-hover:border-indigo-500">
                     <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent rounded-b-lg">
                         <h3 class="text-sm font-bold text-white truncate transition-colors duration-300 group-hover:text-indigo-300">${game.title}</h3>
+                         <p class="text-xs text-indigo-300">${game.releaseDateString}</p>
                     </div>
                 `;
                 card.onclick = () => toggleDetails(game.id);
                 container.appendChild(card);
             });
         }
-        
-        function renderMonthFilters() {
-            const container = document.getElementById('month-filters');
+
+        // --- NUEVA FUNCIÓN: RENDERIZAR GANADORES DEL GOTY ---
+        function renderGotyWinners() {
+            const container = document.getElementById('goty-container');
             container.innerHTML = '';
-            const now = new Date();
+            // Lista estática con los últimos ganadores. No requiere API.
+            const gotyWinners = [
+                { year: 2023, title: "Baldur's Gate 3", imageUrl: 'https://media.rawg.io/media/games/26d/26d4437715bee6063523f28359859f99.jpg' },
+                { year: 2022, title: "Elden Ring", imageUrl: 'https://media.rawg.io/media/games/5ec/5ecac5cb026ec26a56efcc16492b1bed.jpg' },
+                { year: 2021, title: "It Takes Two", imageUrl: 'https://media.rawg.io/media/games/34b/34b1f1bee303af1371b342a7708c5d88.jpg' },
+                { year: 2020, title: "The Last of Us Part II", imageUrl: 'https://media.rawg.io/media/games/364/3646d82b24f5a3e4c4058b8f83446adf.jpg' },
+                { year: 2019, title: "Sekiro: Shadows Die Twice", imageUrl: 'https://media.rawg.io/media/games/679/679d2b27063c198f1a3a303119c8f034.jpg' }
+            ];
+
+            gotyWinners.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'group relative';
+                card.innerHTML = `
+                    <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-72 object-cover border-2 border-amber-400/50">
+                    <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black via-black/70 to-transparent rounded-b-lg">
+                        <h3 class="text-base font-bold text-white">${game.title}</h3>
+                        <p class="text-sm font-semibold text-amber-300">GOTY ${game.year}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        // El resto de funciones (renderMonthFilters, renderTable, applyFilters) no tienen cambios
+        function renderMonthFilters() {
+            const container = document.getElementById('month-filters'); container.innerHTML = ''; const now = new Date();
             const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            const allBtn = document.createElement('button');
-            allBtn.textContent = 'Todos';
+            const allBtn = document.createElement('button'); allBtn.textContent = 'Todos';
             allBtn.className = 'filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600';
             if (activeFilter.month === null) allBtn.classList.add('active');
             allBtn.onclick = () => { activeFilter = { month: null, year: null }; applyFilters(); };
             container.appendChild(allBtn);
             for (let i = 0; i < 24; i++) {
                 const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-                const month = date.getMonth();
-                const year = date.getFullYear();
-                const shortYear = `'${String(year).slice(-2)}`;
-                const btn = document.createElement('button');
-                btn.textContent = `${monthNames[month]}${shortYear}`;
-                btn.dataset.month = month;
-                btn.dataset.year = year;
+                const month = date.getMonth(); const year = date.getFullYear(); const shortYear = `'${String(year).slice(-2)}`;
+                const btn = document.createElement('button'); btn.textContent = `${monthNames[month]}${shortYear}`;
+                btn.dataset.month = month; btn.dataset.year = year;
                 btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600`;
                 if(activeFilter.month === month && activeFilter.year === year) btn.classList.add('active');
                 btn.onclick = () => { activeFilter = { month, year }; applyFilters(); };
                 container.appendChild(btn);
             }
         }
-        
         function renderTable(games) {
-            const tableBody = document.getElementById('game-table-body');
-            tableBody.innerHTML = '';
-            if (games.length === 0) {
-                 tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos.</td></tr>`;
-                 return;
-            }
+            const tableBody = document.getElementById('game-table-body'); tableBody.innerHTML = '';
+            if (games.length === 0) { tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos.</td></tr>`; return; }
             games.forEach(game => {
-                 const row = document.createElement('tr');
-                row.className = 'data-row';
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm title-cell">${game.title}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.platforms}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.releaseDate ? game.releaseDate.toLocaleDateString('es-ES') : 'TBA'}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.genre}</td>
-                `;
+                 const row = document.createElement('tr'); row.className = 'data-row';
+                row.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm title-cell">${game.title}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.platforms}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.releaseDate ? game.releaseDate.toLocaleDateString('es-ES') : 'TBA'}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${game.genre}</td>`;
                 row.querySelector('.title-cell').onclick = () => toggleDetails(game.id);
                 tableBody.appendChild(row);
             });
         }
-        
         function applyFilters() {
             let filteredGames = [...allGamesData].sort((a,b) => (a.releaseDate || 0) - (b.releaseDate || 0));
             if (activeFilter.month !== null && activeFilter.year !== null) {
-                filteredGames = filteredGames.filter(g => 
-                    g.releaseDate && 
-                    g.releaseDate.getMonth() === activeFilter.month &&
-                    g.releaseDate.getFullYear() === activeFilter.year
-                );
+                filteredGames = filteredGames.filter(g => g.releaseDate && g.releaseDate.getMonth() === activeFilter.month && g.releaseDate.getFullYear() === activeFilter.year);
             }
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            if (searchTerm) {
-                filteredGames = filteredGames.filter(g => g.title.toLowerCase().includes(searchTerm));
-            }
+            if (searchTerm) { filteredGames = filteredGames.filter(g => g.title.toLowerCase().includes(searchTerm)); }
             document.querySelectorAll('#month-filters .filter-btn').forEach(btn => {
                 const isAllButton = btn.textContent === 'Todos';
-                const isActive = (isAllButton && activeFilter.month === null) || 
-                                 (!isAllButton && parseInt(btn.dataset.month) === activeFilter.month && parseInt(btn.dataset.year) === activeFilter.year);
+                const isActive = (isAllButton && activeFilter.month === null) || (!isAllButton && parseInt(btn.dataset.month) === activeFilter.month && parseInt(btn.dataset.year) === activeFilter.year);
                 btn.classList.toggle('active', isActive);
             });
             renderTable(filteredGames);
         }
         window.applyFilters = applyFilters;
-
         async function refreshData() {
             document.getElementById('featured-loading').style.display = 'block';
             document.getElementById('error-message').classList.add('hidden');
             allGamesData = await fetchGamesFromAPI();
             renderFeaturedGames(allGamesData);
+            renderFeatured2026(allGamesData); // Llamada a la nueva función
+            renderGotyWinners(); // Llamada a la nueva función
             applyFilters();
         };
         window.refreshData = refreshData;

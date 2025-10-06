@@ -19,10 +19,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .modal-leave { animation: fadeOut 0.3s ease-out; }
         @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
-        .horizontal-scroll-container { scrollbar-width: thin; scrollbar-color: #4f46e5 #1a222c; }
-        .horizontal-scroll-container::-webkit-scrollbar { height: 8px; }
-        .horizontal-scroll-container::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
-        .horizontal-scroll-container::-webkit-scrollbar-track { background: #1a222c; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -37,17 +33,21 @@
 
         <section id="featured-section" class="mb-10">
             <h2 id="featured-title" class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6">
-                🔥 Próximos Estrenos
+                
             </h2>
-            <div id="featured-games-container" class="horizontal-scroll-container flex overflow-x-auto gap-6 pb-4">
-                <div id="featured-loading" class="text-center w-full py-10 text-lg text-indigo-400">
-                    Buscando los juegos más esperados... <span class="spinner inline-block ml-2"></span>
+            <div id="featured-games-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                <div id="featured-loading" class="text-center col-span-full py-10 text-lg text-indigo-400">
+                    Consultando lanzamientos... <span class="spinner inline-block ml-2"></span>
                 </div>
             </div>
         </section>
         
+        <h3 class="text-xl md:text-2xl font-bold text-gray-200 border-b-2 border-gray-700 pb-2 mb-6">
+            Catálogo Completo
+        </h3>
+
         <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <input type="text" id="search-input" placeholder="Buscar en la lista..."
+            <input type="text" id="search-input" placeholder="Buscar en el catálogo..."
                    class="w-full md:w-auto p-3 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition duration-200"
                    oninput="applyFilters()">
             <div class="flex items-center gap-2">
@@ -77,7 +77,7 @@
 
     <script type="module">
         let allGamesData = [];
-        let activeFilter = { month: null, year: null }; // Objeto para el nuevo filtro
+        let activeFilter = { month: null, year: null };
 
         async function fetchGamesFromAPI() {
             try {
@@ -87,10 +87,7 @@
                 
                 return data.map(game => {
                     const releaseDate = game.releaseDate ? new Date(game.releaseDate) : null;
-                    return {
-                        ...game,
-                        releaseDate: releaseDate
-                    };
+                    return { ...game, releaseDate };
                 });
             } catch (error) {
                 console.error("Error al obtener los juegos:", error);
@@ -101,34 +98,38 @@
             }
         }
         
+        // --- FUNCIÓN MODIFICADA PARA LANZAMIENTOS DE HOY ---
         function renderFeaturedGames(games) {
             const container = document.getElementById('featured-games-container');
+            const titleElement = document.getElementById('featured-title');
+            document.getElementById('featured-loading').style.display = 'none';
             container.innerHTML = '';
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const nextMonth = (currentMonth + 1) % 12;
-            const currentYear = now.getFullYear();
-            const yearForNextMonth = nextMonth === 0 ? currentYear + 1 : currentYear;
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalizar a la medianoche para comparar solo la fecha
 
-            const featuredGames = games
-                .filter(g => g.releaseDate && 
-                    ((g.releaseDate.getMonth() === currentMonth && g.releaseDate.getFullYear() === currentYear) || 
-                     (g.releaseDate.getMonth() === nextMonth && g.releaseDate.getFullYear() === yearForNextMonth))
-                )
-                .sort((a, b) => a.releaseDate - b.releaseDate);
+            const todayGames = games.filter(g => {
+                if (!g.releaseDate) return false;
+                const releaseDate = new Date(g.releaseDate);
+                releaseDate.setHours(0, 0, 0, 0);
+                return releaseDate.getTime() === today.getTime();
+            });
 
-            if (featuredGames.length === 0) {
-                container.innerHTML = `<p class="text-center w-full text-gray-500">No hay lanzamientos destacados para este mes o el siguiente.</p>`;
+            titleElement.innerHTML = `🔥 Lanzamientos de Hoy <span class="text-indigo-400">(${today.toLocaleDateString('es-ES')})</span>`;
+
+            if (todayGames.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No hay lanzamientos programados para hoy en la base de datos.</p>`;
                 return;
             }
 
-            featuredGames.slice(0, 15).forEach(game => {
+            todayGames.forEach(game => {
                 const card = document.createElement('div');
-                card.className = 'flex-shrink-0 w-48 text-center cursor-pointer transition-transform duration-200 hover:scale-105';
+                card.className = 'group relative cursor-pointer';
                 card.innerHTML = `
-                    <p class="font-bold text-lg text-indigo-400">${game.releaseDateString.split(' ')[0]} <span class="text-gray-400">${game.releaseDateString.split(' ')[1]}</span></p>
-                    <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-64 object-cover my-2 border-2 border-transparent hover:border-indigo-500">
-                    <h3 class="text-sm font-semibold text-white truncate">${game.title}</h3>
+                    <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-72 object-cover transition-transform duration-300 group-hover:scale-105 border-2 border-transparent group-hover:border-indigo-500">
+                    <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent rounded-b-lg">
+                        <h3 class="text-sm font-bold text-white truncate transition-colors duration-300 group-hover:text-indigo-300">${game.title}</h3>
+                    </div>
                 `;
                 card.onclick = () => toggleDetails(game.id);
                 container.appendChild(card);
@@ -139,11 +140,8 @@
             const container = document.getElementById('month-filters');
             container.innerHTML = '';
             const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth();
             const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-            // Botón "Todos"
             const allBtn = document.createElement('button');
             allBtn.textContent = 'Todos';
             allBtn.className = 'filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600';
@@ -151,9 +149,8 @@
             allBtn.onclick = () => { activeFilter = { month: null, year: null }; applyFilters(); };
             container.appendChild(allBtn);
 
-            // Meses restantes de este año y los 12 del siguiente
             for (let i = 0; i < 24; i++) {
-                const date = new Date(currentYear, currentMonth + i, 1);
+                const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
                 const month = date.getMonth();
                 const year = date.getFullYear();
                 const shortYear = `'${String(year).slice(-2)}`;
@@ -165,10 +162,7 @@
                 btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600`;
                 if(activeFilter.month === month && activeFilter.year === year) btn.classList.add('active');
                 
-                btn.onclick = () => { 
-                    activeFilter = { month, year }; 
-                    applyFilters(); 
-                };
+                btn.onclick = () => { activeFilter = { month, year }; applyFilters(); };
                 container.appendChild(btn);
             }
         }
@@ -177,7 +171,7 @@
             const tableBody = document.getElementById('game-table-body');
             tableBody.innerHTML = '';
             if (games.length === 0) {
-                 tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos con los filtros seleccionados.</td></tr>`;
+                 tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos.</td></tr>`;
                  return;
             }
             games.forEach(game => {
@@ -196,7 +190,6 @@
 
         function applyFilters() {
             let filteredGames = [...allGamesData].sort((a,b) => (a.releaseDate || 0) - (b.releaseDate || 0));
-            
             if (activeFilter.month !== null && activeFilter.year !== null) {
                 filteredGames = filteredGames.filter(g => 
                     g.releaseDate && 
@@ -204,12 +197,10 @@
                     g.releaseDate.getFullYear() === activeFilter.year
                 );
             }
-
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             if (searchTerm) {
                 filteredGames = filteredGames.filter(g => g.title.toLowerCase().includes(searchTerm));
             }
-
             document.querySelectorAll('#month-filters .filter-btn').forEach(btn => {
                 const isAllButton = btn.textContent === 'Todos';
                 const isActive = (isAllButton && activeFilter.month === null) || 
@@ -220,12 +211,9 @@
         }
         window.applyFilters = applyFilters;
         
-        // --- El resto de funciones (toggleDetails, refreshData, main) no necesitan cambios significativos ---
-        // Se pegan aquí para asegurar que el código esté completo
         function toggleDetails(gameId) {
             const detailsPanel = document.getElementById('details-panel');
             const game = allGamesData.find(g => g.id === gameId);
-
             if (!gameId || detailsPanel.classList.contains('active')) {
                 detailsPanel.classList.add('modal-leave');
                 setTimeout(() => {
@@ -251,7 +239,7 @@
                             </div>
                             <div class="flex-grow">
                                 <h2 class="text-3xl font-bold text-indigo-400 mb-2">${game.title}</h2>
-                                <p class="mb-4"><span class="font-bold text-gray-300">Lanzamiento:</span> ${game.releaseDateString}</p>
+                                <p class="mb-4"><span class="font-bold text-gray-300">Lanzamiento:</span> ${new Date(game.releaseDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric'})}</p>
                                 <p class="text-sm text-gray-400 italic">${game.notes}</p>
                             </div>
                         </div>
@@ -266,13 +254,8 @@
 
         async function refreshData() {
             document.getElementById('featured-loading').style.display = 'block';
-            document.getElementById('featured-games-container').innerHTML = '';
             document.getElementById('error-message').classList.add('hidden');
-            
             allGamesData = await fetchGamesFromAPI();
-            
-            document.getElementById('featured-loading').style.display = 'none';
-
             renderFeaturedGames(allGamesData);
             applyFilters();
         };
@@ -282,7 +265,6 @@
             const dateElement = document.getElementById('current-date');
             const today = new Date();
             dateElement.textContent = `Hoy es ${today.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
-            
             renderMonthFilters();
             refreshData();
         }

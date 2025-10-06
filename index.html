@@ -41,12 +41,24 @@
         <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <input type="text" id="search-input" placeholder="Busca cualquier juego..."
                    class="w-full md:flex-grow p-3 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition duration-200">
-            <div id="year-filters" class="flex-shrink-0 flex flex-wrap gap-2 justify-center"></div>
+            <div class="flex-shrink-0 flex items-center gap-2">
+                <div id="year-filters" class="flex flex-wrap gap-2 justify-center"></div>
+                <button id="reset-filters-btn" title="Resetear Filtros" class="bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg shadow-lg transition duration-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
         </div>
         
         <div id="error-message" class="hidden bg-red-800 p-4 rounded-lg mb-4 text-sm"></div>
         <div id="game-grid-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 min-h-[300px]"></div>
         
+        <section id="goty-section" class="mt-12">
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-amber-400 pb-2 mb-6">
+                🏆 Ganadores del Game of the Year
+            </h2>
+            <div id="goty-container" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2"></div>
+        </section>
+
         <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
     </main>
 
@@ -64,7 +76,6 @@
             const container = document.getElementById('game-grid-container');
             container.innerHTML = `<div class="col-span-full text-center py-20 text-lg text-indigo-400">Cargando catálogo inicial... <span class="spinner inline-block ml-2"></span></div>`;
             
-            // Hacemos las dos peticiones iniciales en paralelo
             const [gamesResponse, platformsResponse] = await Promise.all([
                 fetch('/api/getGames'),
                 fetch('/api/getPlatforms')
@@ -78,6 +89,7 @@
             
             allGamesData = games.map(game => ({ ...game, releaseDate: game.releaseDate ? new Date(game.releaseDate) : null }));
             renderPlatformFilters(platforms);
+            renderGotyWinners();
             applyFilters();
         }
 
@@ -99,15 +111,9 @@
             const container = document.getElementById('platform-filters');
             container.innerHTML = '';
 
-            const allBtn = document.createElement('button');
-            allBtn.innerHTML = `<span>Todos</span>`;
-            allBtn.className = 'platform-btn px-4 py-2 rounded-lg bg-gray-700 font-bold active';
-            allBtn.onclick = () => { activePlatformFilter = null; applyFilters(); };
-            container.appendChild(allBtn);
-
             platforms.forEach(platform => {
                 const btn = document.createElement('button');
-                btn.innerHTML = `<span>${platform.name}</span>`; // Puedes añadir SVGs de logos aquí si quieres
+                btn.innerHTML = `<span>${platform.name}</span>`;
                 btn.className = 'platform-btn px-4 py-2 rounded-lg bg-gray-700 font-bold';
                 btn.dataset.platformId = platform.id;
                 btn.onclick = () => {
@@ -130,16 +136,47 @@
                 card.className = 'game-card bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer';
                 const platformNames = game.platforms.map(p => p.platform.name).join(', ');
                 card.innerHTML = `<img src="${game.imageUrl || 'https://via.placeholder.com/400x225.png?text=Sin+Imagen'}" alt="${game.title}" class="w-full h-40 object-cover"><div class="p-4"><h3 class="text-lg font-bold text-white truncate">${game.title}</h3><p class="text-sm text-gray-400 truncate">${platformNames}</p><p class="text-sm text-indigo-400 mt-2">${game.releaseDate ? game.releaseDate.toLocaleDateString('es-ES') : 'TBA'}</p></div>`;
-                card.onclick = () => toggleDetails(game); // Pasamos el objeto de juego directamente
+                card.onclick = () => toggleDetails(game);
                 container.appendChild(card);
             });
         }
-
+        
+        function renderGotyWinners() {
+            const container = document.getElementById('goty-container');
+            container.innerHTML = '';
+            const gotyWinners = [
+                { year: 2023, title: "Baldur's Gate 3", id: 41494 },
+                { year: 2022, title: "Elden Ring", id: 326249 },
+                { year: 2021, title: "It Takes Two", id: 457213 },
+                { year: 2020, title: "The Last of Us Part II", id: 3070 }
+            ];
+            gotyWinners.forEach(game => {
+                const item = document.createElement('div');
+                item.className = 'p-3 bg-gray-800 rounded-md cursor-pointer hover:bg-indigo-600 transition-colors';
+                item.innerHTML = `<span class="font-bold text-amber-300">${game.year}</span><span class="ml-4 text-gray-300">${game.title}</span>`;
+                item.onclick = () => toggleDetails(game.id);
+                container.appendChild(item);
+            });
+        }
+        
+        function renderYearFilters() {
+            const container = document.getElementById('year-filters');
+            container.innerHTML = '';
+            const currentYear = new Date().getFullYear();
+            const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4];
+            years.forEach(year => {
+                const btn = document.createElement('button');
+                btn.textContent = year;
+                btn.dataset.year = year;
+                btn.className = 'filter-btn px-3 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600';
+                btn.onclick = () => { activeYearFilter = activeYearFilter === year ? null : year; applyFilters(); };
+                container.appendChild(btn);
+            });
+        }
+        
         function applyFilters() {
-            // Cuando se aplica un filtro, cancelamos cualquier búsqueda en tiempo real
             clearTimeout(searchTimeout);
-            document.getElementById('search-input').value = '';
-
+            
             let filteredGames = [...allGamesData];
             
             if (activeYearFilter) {
@@ -150,6 +187,11 @@
                 filteredGames = filteredGames.filter(g => g.platforms.some(p => p.platform.id === activePlatformFilter));
             }
 
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            if (searchTerm) {
+                 filteredGames = filteredGames.filter(g => g.title.toLowerCase().includes(searchTerm));
+            }
+            
             document.querySelectorAll('#year-filters .filter-btn').forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.year) === activeYearFilter));
             document.querySelectorAll('#platform-filters .platform-btn').forEach(btn => {
                 const isAllButton = !btn.dataset.platformId;
@@ -158,10 +200,70 @@
 
             renderGameGrid(filteredGames);
         }
+
+        function resetFilters() {
+            activeYearFilter = null;
+            activePlatformFilter = null;
+            document.getElementById('search-input').value = '';
+            applyFilters();
+        }
         
-        // La función de detalles ahora puede recibir el objeto de juego o un ID
         async function toggleDetails(gameOrId) {
-            // ... (código del modal de detalles rediseñado - sin cambios)
+            const detailsPanel = document.getElementById('details-panel');
+            const isOpen = !detailsPanel.classList.contains('hidden');
+
+            if (isOpen || !gameOrId) {
+                detailsPanel.classList.add('hidden');
+                detailsPanel.innerHTML = '';
+                return;
+            }
+            
+            detailsPanel.innerHTML = `<div class="w-full max-w-5xl text-center py-20 text-lg text-indigo-400">Cargando detalles... <span class="spinner inline-block ml-2"></span></div>`;
+            detailsPanel.classList.remove('hidden');
+
+            try {
+                const gameId = typeof gameOrId === 'object' ? gameOrId.id : gameOrId;
+                let gameDetails = allGamesData.find(g => g.id === gameId && g.description);
+
+                if (!gameDetails) {
+                    const response = await fetch(`/api/getGameDetails?id=${gameId}`);
+                    if (!response.ok) throw new Error('No se pudieron cargar los detalles del juego.');
+                    gameDetails = await response.json();
+                }
+                
+                const steamStore = gameDetails.stores?.find(s => s.store.slug === 'steam');
+                const platforms = gameDetails.platforms?.map(p => p.platform.name).join(', ');
+                const genres = gameDetails.genres?.map(g => g.name).join(', ');
+                const releaseDate = gameDetails.released ? new Date(gameDetails.released).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric'}) : 'Fecha no disponible';
+                let screenshotsHtml = gameDetails.short_screenshots?.slice(1, 5).map(ss => `<img src="${ss.image}" class="rounded-md h-24 w-full object-cover">`).join('') || '';
+
+                detailsPanel.innerHTML = `
+                    <div class="relative w-full max-w-5xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-400">${releaseDate}</p>
+                            <h2 class="text-4xl lg:text-6xl font-bold text-white">${gameDetails.name}</h2>
+                        </div>
+                        <div class="flex flex-col lg:flex-row gap-6">
+                            <div class="w-full lg:w-2/5 flex-shrink-0">
+                                <img src="${gameDetails.background_image}" alt="${gameDetails.name}" class="rounded-lg shadow-lg w-full mb-4">
+                                <div class="space-y-3">
+                                    </div>
+                            </div>
+                            <div class="w-full lg:w-3/5">
+                                <h3 class="font-bold text-xl mb-2 text-indigo-400">Acerca de</h3>
+                                <div class="text-gray-300 prose prose-invert max-h-48 overflow-y-auto mb-4">${gameDetails.description || 'Sin descripción.'}</div>
+                                <h3 class="font-bold text-xl mb-2 text-indigo-400">Plataformas</h3>
+                                <p class="text-gray-300 mb-4">${platforms || 'N/D'}</p>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">${screenshotsHtml}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                detailsPanel.onclick = () => toggleDetails();
+            } catch (error) {
+                detailsPanel.innerHTML = `<div class="relative w-full max-w-md bg-gray-800 p-6 rounded-xl"><p class="text-red-400">Error: ${error.message}</p><button onclick="window.toggleDetails()" class="mt-4 bg-indigo-600 px-4 py-2 rounded">Cerrar</button></div>`;
+            }
         }
         window.toggleDetails = toggleDetails;
 
@@ -176,24 +278,19 @@
                 searchTimeout = setTimeout(() => {
                     const searchTerm = searchInput.value.trim();
                     if (searchTerm) {
-                        // Al buscar, desactivamos los otros filtros para no crear confusión
                         activeYearFilter = null;
                         activePlatformFilter = null;
                         document.querySelectorAll('.filter-btn.active, .platform-btn.active').forEach(b => b.classList.remove('active'));
                         fetchSearchData(searchTerm);
                     } else {
-                        // Si se borra la búsqueda, volvemos a aplicar los filtros sobre la lista inicial
-                        applyFilters();
+                        resetFilters();
                     }
                 }, 500);
             });
-            renderYearFilters(); // Se renderizan los botones de año
+            renderYearFilters();
+            document.getElementById('reset-filters-btn').onclick = resetFilters;
         }
-        
-        // --- El resto de funciones no necesitan cambios ---
-        // Se pegan aquí para asegurar que el código esté completo.
-        function renderYearFilters() { const container = document.getElementById('year-filters'); container.innerHTML = ''; const currentYear = new Date().getFullYear(); const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4]; years.forEach(year => { const btn = document.createElement('button'); btn.textContent = year; btn.dataset.year = year; btn.className = 'filter-btn px-3 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600'; btn.onclick = () => { activeYearFilter = activeYearFilter === year ? null : year; applyFilters(); }; container.appendChild(btn); });}
-        
+
         main();
     </script>
 </body>

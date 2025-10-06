@@ -7,44 +7,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0d1117;
-            color: #e6e6e6;
-        }
-        .title-cell {
-            cursor: pointer;
-            color: #818cf8;
-            font-weight: bold;
-            transition: color 0.2s ease-in-out;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #0d1117; color: #e6e6e6; }
+        .title-cell { cursor: pointer; color: #818cf8; font-weight: bold; transition: color 0.2s ease-in-out; }
         .title-cell:hover { color: #a5b4fc; text-decoration: underline; }
         .scroll-container::-webkit-scrollbar { width: 8px; height: 8px; }
         .scroll-container::-webkit-scrollbar-thumb { background: linear-gradient(45deg, #4f46e5, #7c3aed); border-radius: 10px; }
         .scroll-container::-webkit-scrollbar-track { background: #1a222c; }
         .data-row:hover { background-color: #161b22; }
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid #818cf8;
-            border-radius: 50%;
-            width: 16px; height: 16px;
-            animation: spin 1s linear infinite;
-        }
+        .spinner { border: 3px solid rgba(255, 255, 255, 0.3); border-top: 3px solid #818cf8; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .filter-btn { transition: all 0.2s ease-in-out; }
-        .filter-btn.active {
-            background-color: #4f46e5;
-            color: white;
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
-        }
-        .featured-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .featured-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-        }
-        /* Animation for Modal */
+        .filter-btn.active { background-color: #4f46e5; color: white; box-shadow: 0 0 15px rgba(79, 70, 229, 0.5); }
+        .featured-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .featured-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
         .modal-enter { animation: fadeIn 0.3s ease-out; }
         .modal-leave { animation: fadeOut 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
@@ -58,7 +33,7 @@
             <h1 class="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 mb-2">
                 🚀 GameLauncher Pro
             </h1>
-            <p class="text-gray-400">Tu radar de próximos lanzamientos.</p>
+            <p id="current-date" class="text-gray-400 font-semibold"></p>
         </header>
 
         <section id="featured-section" class="mb-10">
@@ -83,8 +58,7 @@
             </div>
         </div>
         
-        <div id="month-filters" class="mb-6 flex flex-wrap gap-2 justify-center p-3 bg-gray-800 rounded-lg">
-             </div>
+        <div id="month-filters" class="mb-6 flex flex-wrap gap-2 justify-center p-3 bg-gray-800 rounded-lg"></div>
 
         <div id="table-loading" class="text-center py-10 text-lg text-indigo-400 hidden">
             Cargando base de datos de lanzamientos... <span class="spinner inline-block ml-2"></span>
@@ -101,18 +75,15 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Género</th>
                     </tr>
                 </thead>
-                <tbody id="game-table-body" class="bg-gray-900 divide-y divide-gray-700">
-                    </tbody>
+                <tbody id="game-table-body" class="bg-gray-900 divide-y divide-gray-700"></tbody>
             </table>
         </div>
 
-        <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-             </div>
+        <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
     </div>
 
     <script type="module">
         let allGamesData = [];
-        // Filtra por defecto por el mes actual
         let activeMonthFilter = new Date().getMonth() + 1;
 
         // --- LÓGICA PRINCIPAL DE OBTENCIÓN DE DATOS ---
@@ -125,24 +96,27 @@
                 }
                 const realData = await response.json();
                 
-                // --- MAPEO SEGURO DE DATOS (EVITA CRASHES) ---
                 return realData.map(game => {
-                    // Si 'cover' no existe, o 'url' no existe, usa una imagen por defecto
-                    const imageUrl = game.cover?.url?.replace('t_thumb', 't_cover_big') || 'https://via.placeholder.com/300x400.png?text=Sin+Imagen';
-                    const platforms = game.platforms?.map(p => p.abbreviation).join(', ') || 'N/D';
                     const releaseDate = game.first_release_date ? new Date(game.first_release_date * 1000) : null;
-                    const genres = game.genres?.map(g => g.name).join(', ') || 'Indefinido';
                     
+                    // Extraer el enlace de Steam (categoría 13)
+                    const steamWebsite = game.websites?.find(w => w.category === 13);
+                    
+                    // Extraer el ID del primer vídeo (usualmente el tráiler)
+                    const trailer = game.videos?.[0];
+
                     return {
                         id: game.id,
                         title: game.name || 'Título Desconocido',
-                        imageUrl: imageUrl,
-                        platforms: platforms,
-                        releaseDate: releaseDate, // Se mantiene como objeto Date para poder filtrar
+                        imageUrl: game.cover?.url?.replace('t_thumb', 't_cover_big') || 'https://via.placeholder.com/300x400.png?text=Sin+Imagen',
+                        platforms: game.platforms?.map(p => p.abbreviation).join(', ') || 'N/D',
+                        releaseDate: releaseDate,
                         releaseDateString: releaseDate ? releaseDate.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Por anunciar',
-                        genre: genres,
+                        genre: game.genres?.map(g => g.name).join(', ') || 'Indefinido',
                         notes: game.summary || 'Sin descripción disponible.',
-                        isFeatured: (game.hypes || 0) > 40 // Destaca juegos con más de 40 'hypes'
+                        hypes: game.hypes || 0,
+                        steamUrl: steamWebsite?.url,
+                        trailerId: trailer?.video_id
                     };
                 });
             } catch (error) {
@@ -150,30 +124,46 @@
                 const errorElement = document.getElementById('error-message');
                 errorElement.textContent = `No se pudieron cargar los datos. ${error.message}`;
                 errorElement.classList.remove('hidden');
-                // Oculta los spinners si hay un error
                 document.getElementById('featured-loading').style.display = 'none';
                 document.getElementById('table-loading').style.display = 'none';
-                return []; // Devuelve un array vacío para que la app no se rompa
+                return [];
             }
         }
         
         // --- RENDERIZADO DE LA INTERFAZ ---
         function renderFeaturedGames(games) {
             const container = document.getElementById('featured-games-container');
-            const featuredGames = games.filter(g => g.isFeatured);
-            
             document.getElementById('featured-loading').style.display = 'none';
             container.innerHTML = '';
             
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            // Filtrar juegos para hoy
+            const todayGames = games.filter(g => g.releaseDate && g.releaseDate >= todayStart && g.releaseDate < new Date(todayStart.getTime() + 24 * 60 * 60 * 1000));
+            
+            // Filtrar juegos para el resto del mes
+            const monthGames = games.filter(g => g.releaseDate && !todayGames.includes(g) && g.releaseDate.getMonth() === currentMonth && g.releaseDate.getFullYear() === currentYear);
+
+            // Ordenar ambas listas por expectación
+            todayGames.sort((a, b) => b.hypes - a.hypes);
+            monthGames.sort((a, b) => b.hypes - a.hypes);
+
+            const featuredGames = [...todayGames, ...monthGames];
+
             if (featuredGames.length === 0) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500">No se encontraron juegos destacados con alta expectación.</p>`;
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500">No hay lanzamientos destacados para el resto de este mes.</p>`;
                 return;
             }
 
-            featuredGames.slice(0, 3).forEach(game => { // Muestra un máximo de 3
+            featuredGames.slice(0, 6).forEach(game => {
+                const isToday = todayGames.includes(game);
                 const card = document.createElement('div');
-                card.className = 'featured-card bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700 cursor-pointer';
+                card.className = 'featured-card relative bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700 cursor-pointer';
                 card.innerHTML = `
+                    ${isToday ? '<div class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg z-10">¡HOY!</div>' : ''}
                     <img src="${game.imageUrl}" alt="${game.title}" class="w-full h-48 object-cover">
                     <div class="p-4">
                         <h3 class="text-xl font-bold text-white truncate">${game.title}</h3>
@@ -188,22 +178,13 @@
         
         function renderMonthFilters() {
             const container = document.getElementById('month-filters');
-            const months = ['Todos', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long' });
-            document.getElementById('featured-title').textContent = `🔥 Destacados de ${currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)}`;
-
             container.innerHTML = '';
+            const months = ['Todos', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
             months.forEach((month, index) => {
                 const btn = document.createElement('button');
                 btn.textContent = month;
-                btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600`;
-                if (index === activeMonthFilter) {
-                    btn.classList.add('active');
-                }
-                btn.onclick = () => {
-                    activeMonthFilter = index;
-                    applyFilters();
-                };
+                btn.className = `filter-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600 ${index === activeMonthFilter ? 'active' : ''}`;
+                btn.onclick = () => { activeMonthFilter = index; applyFilters(); };
                 container.appendChild(btn);
             });
         }
@@ -212,7 +193,7 @@
             const tableBody = document.getElementById('game-table-body');
             tableBody.innerHTML = '';
             if (games.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos que coincidan con los filtros.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No hay juegos que coincidan con los filtros.</td></tr>`;
                 return;
             }
             games.forEach(game => {
@@ -232,26 +213,16 @@
         // --- FILTROS Y EVENTOS ---
         function applyFilters() {
             let filteredGames = [...allGamesData];
-
-            if (activeMonthFilter > 0) { // 0 es 'Todos'
-                filteredGames = filteredGames.filter(game => {
-                    return game.releaseDate && game.releaseDate.getMonth() === activeMonthFilter - 1;
-                });
+            if (activeMonthFilter > 0) {
+                filteredGames = filteredGames.filter(g => g.releaseDate && g.releaseDate.getMonth() === activeMonthFilter - 1);
             }
-
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             if (searchTerm) {
-                filteredGames = filteredGames.filter(game =>
-                    game.title.toLowerCase().includes(searchTerm) ||
-                    game.platforms.toLowerCase().includes(searchTerm) ||
-                    game.genre.toLowerCase().includes(searchTerm)
+                filteredGames = filteredGames.filter(g =>
+                    g.title.toLowerCase().includes(searchTerm) || g.platforms.toLowerCase().includes(searchTerm) || g.genre.toLowerCase().includes(searchTerm)
                 );
             }
-            
-            document.querySelectorAll('#month-filters .filter-btn').forEach((btn, index) => {
-                btn.classList.toggle('active', index === activeMonthFilter);
-            });
-
+            document.querySelectorAll('#month-filters .filter-btn').forEach((btn, index) => btn.classList.toggle('active', index === activeMonthFilter));
             renderTable(filteredGames);
         }
         window.applyFilters = applyFilters;
@@ -271,21 +242,27 @@
                 detailsPanel.innerHTML = `
                     <div class="relative w-full max-w-4xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
                         <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="md:col-span-1"><img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full"></div>
-                            <div class="md:col-span-2 flex flex-col space-y-3">
-                                <h2 class="text-3xl font-bold text-indigo-400">${game.title}</h2>
-                                <p><span class="font-bold text-gray-300">Plataformas:</span> ${game.platforms}</p>
-                                <p><span class="font-bold text-gray-300">Fecha:</span> ${game.releaseDateString}</p>
-                                <p><span class="font-bold text-gray-300">Género:</span> ${game.genre}</p>
-                                <p class="text-gray-400 italic pt-2 border-t border-gray-700">${game.notes}</p>
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <div class="flex-shrink-0 w-full md:w-1/3">
+                                <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full">
+                                ${game.steamUrl ? `<a href="${game.steamUrl}" target="_blank" rel="noopener noreferrer" class="block w-full mt-4 text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Comprar en Steam</a>` : ''}
+                            </div>
+                            <div class="flex-grow">
+                                <h2 class="text-3xl font-bold text-indigo-400 mb-2">${game.title}</h2>
+                                <p class="mb-4"><span class="font-bold text-gray-300">Lanzamiento:</span> ${game.releaseDateString}</p>
+                                <p class="text-sm text-gray-400 italic mb-4">${game.notes}</p>
+                                ${game.trailerId ? `
+                                    <div class="aspect-w-16 aspect-h-9">
+                                        <iframe src="https://www.youtube.com/embed/${game.trailerId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full rounded"></iframe>
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
                 `;
                 detailsPanel.classList.remove('hidden');
                 detailsPanel.classList.add('active');
-                detailsPanel.onclick = () => toggleDetails(); // Cierra el modal si se hace clic en el fondo
+                detailsPanel.onclick = () => toggleDetails();
             }
         }
         window.toggleDetails = toggleDetails;
@@ -307,6 +284,10 @@
 
         // --- INICIALIZACIÓN DE LA APP ---
         function main() {
+            const dateElement = document.getElementById('current-date');
+            const today = new Date();
+            dateElement.textContent = `Hoy es ${today.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+            
             renderMonthFilters();
             refreshData();
         }

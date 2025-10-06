@@ -33,6 +33,7 @@
             </h1>
             <p id="current-date" class="text-gray-400 font-semibold"></p>
         </header>
+
         <section id="featured-section" class="mb-10">
             <h2 id="featured-title" class="text-2xl md:text-3xl font-bold text-gray-200 border-b-2 border-indigo-500 pb-2 mb-6"></h2>
             <div id="featured-games-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
@@ -41,6 +42,7 @@
                 </div>
             </div>
         </section>
+
         <h3 class="text-xl md:text-2xl font-bold text-gray-200 border-b-2 border-gray-700 pb-2 mb-6">
             Catálogo Completo
         </h3>
@@ -94,7 +96,6 @@
             }
         }
         
-        // --- FUNCIÓN DE RENDERIZADO DEL MODAL (ACTUALIZADA) ---
         function getMetacriticHtml(score) {
             if (!score) return '';
             
@@ -163,8 +164,6 @@
         }
         window.toggleDetails = toggleDetails;
 
-        // --- El resto de funciones (main, refreshData, renderTable, etc.) no cambian ---
-        // Se incluyen aquí para que el script esté completo.
         function renderFeaturedGames(games) {
             const container = document.getElementById('featured-games-container');
             const titleElement = document.getElementById('featured-title');
@@ -201,6 +200,7 @@
                 container.appendChild(card);
             });
         }
+        
         function renderMonthFilters() {
             const container = document.getElementById('month-filters');
             container.innerHTML = '';
@@ -227,6 +227,7 @@
                 container.appendChild(btn);
             }
         }
+        
         function renderTable(games) {
             const tableBody = document.getElementById('game-table-body');
             tableBody.innerHTML = '';
@@ -247,6 +248,7 @@
                 tableBody.appendChild(row);
             });
         }
+        
         function applyFilters() {
             let filteredGames = [...allGamesData].sort((a,b) => (a.releaseDate || 0) - (b.releaseDate || 0));
             if (activeFilter.month !== null && activeFilter.year !== null) {
@@ -269,6 +271,7 @@
             renderTable(filteredGames);
         }
         window.applyFilters = applyFilters;
+
         async function refreshData() {
             document.getElementById('featured-loading').style.display = 'block';
             document.getElementById('error-message').classList.add('hidden');
@@ -277,6 +280,7 @@
             applyFilters();
         };
         window.refreshData = refreshData;
+
         function main() {
             const dateElement = document.getElementById('current-date');
             const today = new Date();
@@ -284,6 +288,7 @@
             renderMonthFilters();
             refreshData();
         }
+
         main();
     </script>
 </body>

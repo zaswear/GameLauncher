@@ -8,10 +8,11 @@ export default async function handler(request, response) {
     try {
         const now = new Date();
         const currentYear = now.getFullYear();
-        const nextYear = currentYear + 1;
-        
-        // Aumentamos el tamaño de la página a 60 para tener una selección más amplia
-        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${currentYear}-01-01,${nextYear}-12-31&ordering=-added&page_size=1060`;
+        const startYear = currentYear - 4; // Ir 4 años atrás
+        const endYear = currentYear + 1;   // Mirar 1 año hacia el futuro
+
+        // Pide juegos de un rango de 6 años, ordenados por los más añadidos recientemente
+        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${startYear}-01-01,${endYear}-12-31&ordering=-added&page_size=100`;
 
         const apiResponse = await fetch(url);
 
@@ -29,8 +30,7 @@ export default async function handler(request, response) {
             releaseDate: game.released,
             releaseDateString: new Date(game.released).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).toUpperCase().replace('.','') || 'TBA',
             genre: game.genres?.map(g => g.name).join(', ') || 'Indefinido',
-            metacritic: game.metacritic || null, 
-            isFeatured: (game.metacritic || 0) > 85, 
+            metacritic: game.metacritic || null,
             steamUrl: game.stores?.find(s => s.store.slug === 'steam')?.url,
             trailerUrl: game.clip?.clip
         }));

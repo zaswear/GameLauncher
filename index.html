@@ -269,9 +269,12 @@
             document.getElementById('featured-loading').style.display = 'block';
             document.getElementById('error-message').classList.add('hidden');
             allGamesData = await fetchGamesFromAPI();
+            
+            // Llamadas a todas las funciones de renderizado
             renderFeaturedGames(allGamesData);
-            renderFeatured2026(allGamesData); // Llamada a la nueva función
-            renderGotyWinners(); // Llamada a la nueva función
+            renderFeatured2026(allGamesData);
+            renderGotyWinners(); // <-- ESTA LÍNEA ES CRUCIAL
+            
             applyFilters();
         };
         window.refreshData = refreshData;

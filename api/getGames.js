@@ -4,7 +4,6 @@ export default async function handler(request, response) {
     const { IGDB_CLIENT_ID, IGDB_CLIENT_SECRET } = process.env;
 
     try {
-        // Autenticación con Twitch (sin cambios)
         const tokenResponse = await fetch(`https://id.twitch.tv/oauth2/token?client_id=${IGDB_CLIENT_ID}&client_secret=${IGDB_CLIENT_SECRET}&grant_type=client_credentials`, {
             method: 'POST',
         });
@@ -12,7 +11,6 @@ export default async function handler(request, response) {
         const tokenJson = await tokenResponse.json();
         const accessToken = tokenJson.access_token;
 
-        // --- PREPARACIÓN DE LAS QUERIES ---
         const now = new Date();
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31);
@@ -20,24 +18,23 @@ export default async function handler(request, response) {
         const endOfYearInSeconds = Math.floor(endOfYear.getTime() / 1000);
         
         const commonFields = "fields name, cover.url, platforms.abbreviation, first_release_date, summary, genres.name, hypes, videos.video_id, videos.name, websites.url, websites.category;";
-        const commonFilters = `where category = 0 & first_release_date >= ${startOfYearInSeconds} & first_release_date <= ${endOfYearInSeconds} & cover.url != null & platforms = {6,167,169};`;
+        
+        // --- LA CORRECCIÓN ESTÁ AQUÍ ---
+        // Se ha eliminado el punto y coma (;) al final de esta línea.
+        const commonFilters = `where category = 0 & first_release_date >= ${startOfYearInSeconds} & first_release_date <= ${endOfYearInSeconds} & cover.url != null & platforms = {6,167,169}`;
 
         // 1. Query para los juegos más esperados (mainstream)
-        const mainstreamBody = `${commonFields} ${commonFilters} sort hypes desc; limit 25;`;
+        const mainstreamBody = `${commonFields} ${commonFilters}; sort hypes desc; limit 25;`;
         
         // 2. Query específica para los juegos Indie más esperados (género ID 32 es "Indie")
-        const indieBody = `${commonFields} where category = 0 & first_release_date >= ${startOfYearInSeconds} & first_release_date <= ${endOfYearInSeconds} & cover.url != null & platforms = {6,167,169} & genres = 32; sort hypes desc; limit 25;`;
+        const indieBody = `${commonFields} ${commonFilters} & genres = 32; sort hypes desc; limit 25;`;
 
-        // Función auxiliar para hacer las peticiones
         const fetchIGDB = (body) => fetch("https://api.igdb.com/v4/games", {
             method: 'POST',
             headers: { 'Client-ID': IGDB_CLIENT_ID, 'Authorization': `Bearer ${accessToken}` },
             body: body
         });
 
-        // --- EJECUCIÓN EN PARALELO Y COMBINACIÓN ---
-        
-        // 3. Ejecutar ambas peticiones en paralelo para más eficiencia
         const [mainstreamResponse, indieResponse] = await Promise.all([
             fetchIGDB(mainstreamBody),
             fetchIGDB(indieBody)
@@ -50,7 +47,6 @@ export default async function handler(request, response) {
         const mainstreamGames = await mainstreamResponse.json();
         const indieGames = await indieResponse.json();
 
-        // 4. Combinar ambas listas y eliminar duplicados
         const allGames = [...mainstreamGames, ...indieGames];
         const uniqueGames = new Map();
         allGames.forEach(game => {
@@ -61,7 +57,6 @@ export default async function handler(request, response) {
         
         const combinedResults = Array.from(uniqueGames.values());
 
-        // Respuesta final al frontend
         response.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
         response.status(200).json(combinedResults);
 

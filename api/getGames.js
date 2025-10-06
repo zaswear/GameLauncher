@@ -12,7 +12,7 @@ export default async function handler(request, response) {
         const endYear = currentYear + 1;   // Mirar 1 año hacia el futuro
 
         // Pide juegos de un rango de 6 años, ordenados por los más añadidos recientemente
-        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${startYear}-01-01,${endYear}-12-31&ordering=-added&page_size=100`;
+        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${startYear}-01-01,${endYear}-12-31&ordering=-added&page_size=100000`;
 
         const apiResponse = await fetch(url);
 

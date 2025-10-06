@@ -141,10 +141,11 @@
         let activeDetailsId = null; // ID del juego cuyos detalles están abiertos
 
         // Datos iniciales de juegos (Septiembre 2025 - Septiembre 2026)
+        // Nota: Los enlaces con valor 'null' no son renderizados como botones activos.
         const initialGames = [
             // Septiembre 2025
             { id: 'g001', title: "Cyberpunk 2077: Phantom Liberty 2", platforms: "PC, PS5, XSX", releaseDate: "12 Sep 2025", genre: "Action RPG", notes: "Gran expansión de la secuela.", steamLink: "https://store.steampowered.com/app/2027150/Cyberpunk_2077_Phantom_Liberty/", ps5Link: "https://store.playstation.com/es-es/product/EP1000-PPSA02187_00-CYBERPUNKEXPANSION", xboxLink: "https://www.xbox.com/es-es/games/store/cyberpunk-2077/9nx4bshc8d50", ggDealsLink: "https://gg.deals/game/cyberpunk-2077-phantom-liberty-2-mock/", instantGamingLink: "https://www.instant-gaming.com/es/10000-cyberpunk-2077-phantom-liberty-2-mock/" },
-            { id: 'g002', title: "Starfield 2", platforms: "PC, XSX", releaseDate: "25 Sep 2025", genre: "Space RPG", notes: "Bethesda de nuevo.", steamLink: "https://store.steampowered.com/app/1716740/Starfield/", xboxLink: "https://www.xbox.com/es-es/games/store/starfield/9n211c47p69d", ggDealsLink: "https://gg.deals/game/starfield-2-mock/", instantGamingLink: "https://www.instant-gaming.com/es/10001-starfield-2-mock/" },
+            { id: 'g002', title: "Starfield 2", platforms: "PC, XSX", releaseDate: "25 Sep 2025", genre: "Space RPG", notes: "Bethesda de nuevo.", steamLink: "https://store.steampowered.com/app/1716740/Starfield/", ps5Link: null, xboxLink: "https://www.xbox.com/es-es/games/store/starfield/9n211c47p69d", ggDealsLink: "https://gg.deals/game/starfield-2-mock/", instantGamingLink: "https://www.instant-gaming.com/es/10001-starfield-2-mock/" },
             
             // Octubre 2025
             { id: 'g003', title: "Vampire: The Masquerade – Bloodlines 2", platforms: "PC, PS5, XSX", releaseDate: "21 Oct 2025", genre: "RPG", notes: "¡El más esperado! Revisar requisitos.", steamLink: "https://store.steampowered.com/app/550540/Vampire_The_Masquerade__Bloodlines_2/", ps5Link: "https://store.playstation.com/es-es/product/EP1000-PPSA02187_00-VAMPIREBLOODLINES2", xboxLink: "https://www.xbox.com/es-es/games/store/vampire-the-masquerade-bloodlines-2/9nb393j65w20", ggDealsLink: "https://gg.deals/game/vampire-the-masquerade-bloodlines-2-mock/", instantGamingLink: "https://www.instant-gaming.com/es/10002-vampire-the-masquerade-bloodlines-2-mock/" },
@@ -345,10 +346,6 @@
         window.updateGameField = async function(docId, field, value) {
             if (!db) return console.log("Modo no persistente: El cambio no se guardará.");
             
-            // Asegurarse de que el panel de detalles se cierre si se edita una fila.
-            // Esto es importante si el campo 'notes' está en el panel. En este caso no está, pero es buena práctica.
-            // window.closeDetailsPanel(); 
-
             try {
                 const docRef = doc(getGamesCollectionRef(), docId);
                 await setDoc(docRef, { [field]: value }, { merge: true });
@@ -380,24 +377,34 @@
 
         // --- 4. Interactividad y Renderizado de la UI ---
 
-        // Renderiza el contenido del panel de detalles
-        function renderDetailsPanel(game) {
-            
-            // Función auxiliar para renderizar enlaces si existen
-            const renderLink = (url, text, bgColor, hoverColor) => {
-                if (!url) return '';
-                // Usamos un ícono simple de enlace para la consistencia visual
+        // Función auxiliar para renderizar enlaces. Muestra 'No disponible' si la URL es nula.
+        const renderLink = (url, text, bgColor, hoverColor) => {
+            if (!url) {
                 return `
-                    <a href="${url}" target="_blank" rel="noopener noreferrer" 
-                       class="flex items-center space-x-2 p-3 ${bgColor} rounded-lg hover:${hoverColor} transition duration-200 transform hover:scale-105 shadow-md">
+                    <div class="flex items-center space-x-2 p-3 bg-gray-600 rounded-lg opacity-50 cursor-default">
                         <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                           <path d="M11 3a1 1 0 100 2h3a1 1 0 001-1V6a1 1 0 10-2 0v2.586L6.586 7.293a1 1 0 00-1.414 1.414l6 6a1 1 0 001.414 0l1.293-1.293V14a1 1 0 102 0v-3a1 1 0 00-1-1h-3z"/>
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                         </svg>
-                        <span class="font-semibold text-white">${text}</span>
-                    </a>
+                        <span class="font-semibold text-white">${text} (No disponible)</span>
+                    </div>
                 `;
             }
+            return `
+                <a href="${url}" target="_blank" rel="noopener noreferrer" 
+                    class="flex items-center space-x-2 p-3 ${bgColor} rounded-lg hover:${hoverColor} transition duration-200 transform hover:scale-105 shadow-md">
+                    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M11 3a1 1 0 100 2h3a1 1 0 001-1V6a1 1 0 10-2 0v2.586L6.586 7.293a1 1 0 00-1.414 1.414l6 6a1 1 0 001.414 0l1.293-1.293V14a1 1 0 102 0v-3a1 1 0 00-1-1h-3z"/>
+                    </svg>
+                    <span class="font-semibold text-white">${text}</span>
+                </a>
+            `;
+        }
 
+
+        // Renderiza el contenido del panel de detalles
+        function renderDetailsPanel(game) {
+            console.log(`Abriendo detalles para: ${game.title}`, game); // Logging para debug
+            
             return `
                 <h2 class="text-3xl font-bold text-indigo-400 mb-4">${game.title} - Detalles</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -418,7 +425,6 @@
                         <div class="space-y-3">
                             ${renderLink(game.ggDealsLink, 'Ofertas en gg.deals', 'bg-gray-700', 'bg-purple-700')}
                             ${renderLink(game.instantGamingLink, 'Instant Gaming (Keys)', 'bg-gray-700', 'bg-yellow-600')}
-                            ${!game.ggDealsLink && !game.instantGamingLink ? '<p class="text-gray-500">No hay enlaces de ofertas disponibles para este juego.</p>' : ''}
                         </div>
                     </div>
 

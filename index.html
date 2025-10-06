@@ -150,19 +150,23 @@
         }
 
         // Simula una llamada a una API
-        function fetchGamesFromAPI() {
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    const data = getMockDatabase();
-                    // Ordenar datos por fecha
-                    data.sort((a, b) => {
-                        const dateA = new Date(a.releaseDate.replace(/Otoño|TBA|Finales|Principios/, "10/01/").replace("+", ""));
-                        const dateB = new Date(b.releaseDate.replace(/Otoño|TBA|Finales|Principios/, "10/01/").replace("+", ""));
-                        return dateA - dateB;
-                    });
-                    resolve(data);
-                }, 800); // Retraso de 800ms para simular red
-            });
+        async function fetchGamesFromAPI() {
+                const response = await fetch('/api/getGames'); // ¡Así de simple!
+                if (!response.ok) {
+                    // Manejar errores
+                    console.error("Error al obtener datos del backend");
+                    return [];
+                }
+                const realData = await response.json();
+                return realData.map(game => ({
+                    id: game.id,
+                    title: game.name,
+                    imageUrl: game.cover.url.replace('t_thumb', 't_cover_big'), // Ajustar tamaño de imagen
+                    platforms: game.platforms.map(p => p.abbreviation).join(', '),
+                    releaseDate: new Date(game.first_release_date * 1000).toLocaleDateString(),
+                    genre: 'N/A', // La API podría no darlo en la primera llamada
+                    notes: game.summary,
+                }));
         }
         
         // --- LÓGICA DE RENDERIZADO Y FILTROS ---

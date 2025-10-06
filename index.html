@@ -60,7 +60,7 @@
                    oninput="applyFilters()">
             <div class="flex items-center gap-2">
                 <button id="refresh-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold p-3 rounded-lg shadow-lg transition duration-200" onclick="refreshData()">
-                    <svg xmlns="http://www.w.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5M12 4V2M12 22v-2M4 12H2M22 12h-2" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5M12 4V2M12 22v-2M4 12H2M22 12h-2" /></svg>
                 </button>
             </div>
         </div>
@@ -95,7 +95,6 @@
         let activeFilter = { month: null, year: null };
 
         async function fetchGamesFromAPI() {
-            // ... (Sin cambios)
             try {
                 const response = await fetch('/api/getGames');
                 if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
@@ -114,8 +113,7 @@
         }
         
         function getMetacriticHtml(score) {
-            // ... (Sin cambios)
-             if (!score) return '';
+            if (!score) return '';
             let scoreClass = 'metascore-average';
             if (score >= 75) scoreClass = 'metascore-good';
             if (score < 50) scoreClass = 'metascore-bad';
@@ -123,7 +121,6 @@
         }
         
         function toggleDetails(gameId) {
-            // ... (Sin cambios)
             const detailsPanel = document.getElementById('details-panel');
             const game = allGamesData.find(g => g.id === gameId);
             if (!gameId || detailsPanel.classList.contains('active')) {
@@ -138,7 +135,6 @@
         window.toggleDetails = toggleDetails;
 
         function renderFeaturedGames(games) {
-            // ... (Sin cambios)
             const container = document.getElementById('featured-games-container');
             const titleElement = document.getElementById('featured-title');
             document.getElementById('featured-loading').style.display = 'none';
@@ -164,41 +160,29 @@
             });
         }
         
-        // --- NUEVA FUNCIÓN: RENDERIZAR DESTACADOS DE 2026 ---
         function renderFeatured2026(games) {
             const container = document.getElementById('featured-2026-container');
             container.innerHTML = '';
-
-            const games2026 = games
-                .filter(g => g.releaseDate && g.releaseDate.getFullYear() === 2026)
-                .sort((a,b) => (a.releaseDate) - (b.releaseDate)); // Ordenar por fecha
+            const nextYear = new Date().getFullYear() + 1;
+            const games2026 = games.filter(g => g.releaseDate && g.releaseDate.getFullYear() === nextYear).sort((a,b) => (a.releaseDate) - (b.releaseDate));
 
             if (games2026.length === 0) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500">Aún no hay juegos de 2026 en la lista.</p>`;
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500">Aún no hay juegos de ${nextYear} en la lista.</p>`;
                 return;
             }
 
             games2026.slice(0, 5).forEach(game => {
                 const card = document.createElement('div');
                 card.className = 'group relative cursor-pointer';
-                card.innerHTML = `
-                    <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-72 object-cover transition-transform duration-300 group-hover:scale-105 border-2 border-transparent group-hover:border-indigo-500">
-                    <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent rounded-b-lg">
-                        <h3 class="text-sm font-bold text-white truncate transition-colors duration-300 group-hover:text-indigo-300">${game.title}</h3>
-                         <p class="text-xs text-indigo-300">${game.releaseDateString}</p>
-                    </div>
-                `;
+                card.innerHTML = `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-72 object-cover transition-transform duration-300 group-hover:scale-105 border-2 border-transparent group-hover:border-indigo-500"><div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent rounded-b-lg"><h3 class="text-sm font-bold text-white truncate transition-colors duration-300 group-hover:text-indigo-300">${game.title}</h3><p class="text-xs text-indigo-300">${game.releaseDateString}</p></div>`;
                 card.onclick = () => toggleDetails(game.id);
                 container.appendChild(card);
             });
         }
 
-        // --- NUEVA FUNCIÓN: RENDERIZAR GANADORES DEL GOTY ---
         function renderGotyWinners() {
             const container = document.getElementById('goty-container');
             container.innerHTML = '';
-            
-            // Lista estática con los últimos ganadores y sus imágenes
             const gotyWinners = [
                 { year: 2023, title: "Baldur's Gate 3", imageUrl: 'https://media.rawg.io/media/games/26d/26d4437715bee6063523f28359859f99.jpg' },
                 { year: 2022, title: "Elden Ring", imageUrl: 'https://media.rawg.io/media/games/5ec/5ecac5cb026ec26a56efcc16492b1bed.jpg' },
@@ -206,23 +190,14 @@
                 { year: 2020, title: "The Last of Us Part II", imageUrl: 'https://media.rawg.io/media/games/364/3646d82b24f5a3e4c4058b8f83446adf.jpg' },
                 { year: 2019, title: "Sekiro: Shadows Die Twice", imageUrl: 'https://media.rawg.io/media/games/679/679d2b27063c198f1a3a303119c8f034.jpg' }
             ];
-
             gotyWinners.forEach(game => {
                 const card = document.createElement('div');
                 card.className = 'group relative';
-                card.innerHTML = `
-                    <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-72 object-cover border-2 border-amber-400/50">
-                    <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black via-black/70 to-transparent rounded-b-lg">
-                        <h3 class="text-base font-bold text-white">${game.title}</h3>
-                        <p class="text-sm font-semibold text-amber-300">GOTY ${game.year}</p>
-                    </div>
-                `;
+                card.innerHTML = `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-72 object-cover border-2 border-amber-400/50"><div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black via-black/70 to-transparent rounded-b-lg"><h3 class="text-base font-bold text-white">${game.title}</h3><p class="text-sm font-semibold text-amber-300">GOTY ${game.year}</p></div>`;
                 container.appendChild(card);
             });
         }
-        }
         
-        // El resto de funciones (renderMonthFilters, renderTable, applyFilters) no tienen cambios
         function renderMonthFilters() {
             const container = document.getElementById('month-filters'); container.innerHTML = ''; const now = new Date();
             const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -242,6 +217,7 @@
                 container.appendChild(btn);
             }
         }
+        
         function renderTable(games) {
             const tableBody = document.getElementById('game-table-body'); tableBody.innerHTML = '';
             if (games.length === 0) { tableBody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No se encontraron juegos.</td></tr>`; return; }
@@ -252,6 +228,7 @@
                 tableBody.appendChild(row);
             });
         }
+        
         function applyFilters() {
             let filteredGames = [...allGamesData].sort((a,b) => (a.releaseDate || 0) - (b.releaseDate || 0));
             if (activeFilter.month !== null && activeFilter.year !== null) {
@@ -267,15 +244,15 @@
             renderTable(filteredGames);
         }
         window.applyFilters = applyFilters;
+
         async function refreshData() {
             document.getElementById('featured-loading').style.display = 'block';
             document.getElementById('error-message').classList.add('hidden');
             allGamesData = await fetchGamesFromAPI();
             
-            // Llamadas a todas las funciones de renderizado
             renderFeaturedGames(allGamesData);
             renderFeatured2026(allGamesData);
-            renderGotyWinners(); // <-- ESTA LÍNEA ES CRUCIAL
+            renderGotyWinners();
             
             applyFilters();
         };

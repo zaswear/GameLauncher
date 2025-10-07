@@ -8,24 +8,27 @@ export default async function handler(request, response) {
 
         const currentYear = new Date().getFullYear();
         let ordering = '';
+        let metacriticFilter = ''; // Variable para el filtro de Metacritic
 
-        // --- LÓGICA CORREGIDA ---
         if (year < currentYear) {
             // Para años pasados, ordenamos por la mejor nota de Metacritic.
-            // Simplificamos la query para que sea más fiable.
             ordering = '-metacritic';
+            // --- MODIFICACIÓN AQUÍ ---
+            // Se añade el filtro para que la nota de Metacritic esté entre 55 y 100.
+            metacriticFilter = '&metacritic=55,100'; 
         } else {
-            // Para el año actual y futuros, ordenamos por fecha de lanzamiento para crear un calendario.
+            // Para el año actual y futuros, ordenamos por fecha de lanzamiento.
             ordering = 'released';
+            metacriticFilter = ''; // No aplicamos filtro de nota para juegos futuros
         }
 
-        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${year}-01-01,${year}-12-31&ordering=${ordering}&page_size=20`;
+        // Se añade la variable metacriticFilter al final de la URL
+        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${year}-01-01,${year}-12-31&ordering=${ordering}&page_size=20${metacriticFilter}`;
         
         const apiResponse = await fetch(url);
         if (!apiResponse.ok) throw new Error('Failed to fetch games for the selected year.');
         const data = await apiResponse.json();
         
-        // Filtramos en el servidor los juegos que no tienen imagen, para asegurar la calidad de la lista
         const filteredResults = data.results.filter(game => game.background_image);
         
         response.status(200).json(filteredResults);

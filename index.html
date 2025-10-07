@@ -3,21 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameLauncher Pro: Dinámico 🚀</title>
+    <title>Mi Biblioteca de Juegos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0d1117; color: #e6e6e6; }
         .spinner { border: 3px solid rgba(255, 255, 255, 0.3); border-top: 3px solid #818cf8; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .year-btn { transition: all 0.2s ease-in-out; }
-        .year-btn.active { background-color: #4f46e5; color: white; box-shadow: 0 0 15px rgba(79, 70, 229, 0.5); }
-        .modal-enter { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .metascore-good { background-color: #6c3; color: white; }
-        .metascore-average { background-color: #fc3; color: white; }
-        .metascore-bad { background-color: #f00; color: white; }
-        .game-card { transition: transform 0.2s ease-out, box-shadow 0.2s ease-out; }
+        .game-card { transition: transform 0.2s ease-out, box-shadow 0.2s ease-out; background-color: #161b22; }
         .game-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
     </style>
 </head>
@@ -26,31 +19,14 @@
     <main class="max-w-7xl mx-auto w-full flex-grow">
         <header class="mb-8 p-4 bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-xl shadow-2xl">
             <h1 class="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 mb-2">
-                🚀 GameLauncher Pro
+                🎮 Mi Biblioteca de Juegos
             </h1>
-            <p id="current-date" class="text-gray-400 font-semibold"></p>
+            <p id="stats-summary" class="text-gray-400 font-semibold"></p>
         </header>
 
-        <h3 class="text-xl md:text-2xl font-bold text-gray-200 border-b-2 border-gray-700 pb-2 mb-6">
-            Explorador de Juegos
-        </h3>
-        
-        <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 p-4 bg-gray-800/50 rounded-lg">
-            <div class="flex items-center gap-4">
-                <label for="sort-filter" class="text-gray-400 font-semibold">Ordenar por:</label>
-                <select id="sort-filter" class="p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500">
-                    <option value="popularity">Popularidad</option>
-                    <option value="rating">Mejor Valorados</option>
-                    <option value="indie">Solo Indies Populares</option>
-                </select>
-            </div>
-            <div id="year-filters" class="flex flex-wrap gap-2 justify-center"></div>
-        </div>
-        
         <div id="error-message" class="hidden bg-red-800 p-4 rounded-lg mb-4 text-sm"></div>
-        <div id="game-grid-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 min-h-[300px]"></div>
-        
-        <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
+        <div id="game-grid-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 min-h-[300px]">
+            </div>
     </main>
 
     <footer class="max-w-7xl mx-auto w-full mt-12 py-6 text-center text-gray-500 border-t border-gray-700">
@@ -58,107 +34,70 @@
     </footer>
 
     <script type="module">
-        let selectedYear = new Date().getFullYear();
-        let activeSortFilter = 'popularity';
-
-        async function loadGamesForYear() {
+        async function fetchMyGames() {
             const container = document.getElementById('game-grid-container');
-            container.innerHTML = `<div class="col-span-full text-center py-20 text-lg text-indigo-400">Buscando juegos... <span class="spinner inline-block ml-2"></span></div>`;
+            container.innerHTML = `<div class="col-span-full text-center py-20 text-lg text-indigo-400">Cargando tu biblioteca de Steam... <span class="spinner inline-block ml-2"></span></div>`;
             try {
-                const response = await fetch(`/api/getGames?year=${selectedYear}&filter=${activeSortFilter}`);
-                if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
+                const response = await fetch('/api/getMySteamGames');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Error del servidor.');
+                }
                 const games = await response.json();
+                
+                // Ordenamos por horas jugadas, de más a menos
+                games.sort((a, b) => b.playtime - a.playtime);
+                
                 renderGameGrid(games);
+                renderStats(games);
+
             } catch (error) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-20">No se pudieron cargar los juegos.</p>`;
+                document.getElementById('error-message').textContent = `No se pudieron cargar tus juegos. Error: ${error.message}`;
+                document.getElementById('error-message').classList.remove('hidden');
+                container.innerHTML = '';
             }
         }
         
         function renderGameGrid(games) {
             const container = document.getElementById('game-grid-container');
             container.innerHTML = '';
-            if (games.length === 0) {
-                 container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-20">No se encontraron juegos con los filtros aplicados.</p>`;
-                 return;
-            }
+
             games.forEach(game => {
                 const card = document.createElement('div');
-                card.className = 'game-card bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer';
-                card.innerHTML = `<img src="${game.imageUrl || 'https://via.placeholder.com/400x225.png?text=Sin+Imagen'}" alt="${game.title}" class="w-full h-40 object-cover"><div class="p-4"><h3 class="text-lg font-bold text-white truncate">${game.title}</h3><p class="text-sm text-gray-400 truncate">${game.platforms}</p><p class="text-sm font-semibold text-indigo-400 mt-2">${game.metacritic ? `Metacritic: ${game.metacritic}` : 'Sin nota'}</p></div>`;
-                card.onclick = () => toggleDetails(game);
-                container.appendChild(card);
-            });
-        }
-
-        function renderYearFilters() {
-            const container = document.getElementById('year-filters');
-            container.innerHTML = '';
-            const currentYear = new Date().getFullYear();
-            const years = [currentYear + 1];
-            for (let i = 0; i < 11; i++) { years.push(currentYear - i); }
-
-            years.forEach(year => {
-                const btn = document.createElement('button');
-                btn.textContent = year;
-                btn.className = `year-btn px-4 py-2 text-sm font-semibold rounded-md bg-gray-700 hover:bg-indigo-600`;
-                if(year === selectedYear) btn.classList.add('active');
-                btn.onclick = () => { 
-                    selectedYear = year;
-                    document.querySelectorAll('.year-btn.active').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    loadGamesForYear(); 
-                };
-                container.appendChild(btn);
-            });
-        }
-        
-        async function toggleDetails(game) {
-            // ... (código del modal de detalles - sin cambios)
-        }
-        window.toggleDetails = toggleDetails;
-
-        function main() {
-            document.getElementById('current-date').textContent = `Hoy es ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
-            renderYearFilters();
-            loadGamesForYear();
-            
-            // Event listener para el nuevo menú desplegable
-            document.getElementById('sort-filter').addEventListener('change', (event) => {
-                activeSortFilter = event.target.value;
-                loadGamesForYear();
-            });
-        }
-        
-        // --- El resto de funciones no necesitan cambios ---
-        // Se pegan aquí para asegurar que el código esté completo.
-        window.toggleDetails = async (game) => {
-             const detailsPanel = document.getElementById('details-panel');
-            detailsPanel.innerHTML = `<div class="w-full max-w-5xl text-center py-20 text-lg text-indigo-400">Cargando detalles... <span class="spinner inline-block ml-2"></span></div>`;
-            detailsPanel.classList.remove('hidden');
-            try {
-                const response = await fetch(`/api/getGameDetails?id=${game.id}`);
-                if (!response.ok) throw new Error('No se pudieron cargar los detalles.');
-                const details = await response.json();
+                card.className = 'game-card rounded-lg shadow-lg overflow-hidden';
                 
-                const steamStore = details.stores?.find(s => s.store.slug === 'steam');
-                const platforms = details.platforms?.map(p => p.platform.name).join(', ');
-                const genres = details.genres?.map(g => g.name).join(', ');
-                const releaseDate = details.released ? new Date(details.released).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric'}) : 'Fecha no disponible';
-                let screenshotsHtml = details.short_screenshots?.slice(1, 5).map(ss => `<img src="${ss.image}" class="rounded-md h-24 w-full object-cover">`).join('') || '';
+                const playtimeText = game.playtime > 0 ? `${game.playtime} horas` : 'Sin jugar';
+                const statusColor = game.playtime > 0 ? 'bg-green-500' : 'bg-gray-500';
 
-                detailsPanel.innerHTML = `
-                    <div class="relative w-full max-w-5xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
-                        <div class="mb-4"><p class="text-sm text-gray-400">${releaseDate}</p><h2 class="text-4xl lg:text-6xl font-bold text-white">${details.name}</h2></div>
-                        <div class="flex flex-col lg:flex-row gap-6">
-                            <div class="w-full lg:w-2/5 flex-shrink-0"><img src="${details.background_image}" alt="${details.name}" class="rounded-lg shadow-lg w-full mb-4"><div class="space-y-3">${(score => score ? `<div class="flex items-center gap-2"><svg class="w-6 h-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#242424"/><path d="M78.62 21.38V78.62H21.38V21.38H78.62ZM87.5 12.5H12.5V87.5H87.5V12.5Z" fill="white"/><path d="M45.56 65.5V36.68H38.3V30H61.7V36.68H54.44V65.5H45.56Z" fill="white"/></svg><span class="font-bold text-gray-300">Metacritic</span><span class="font-bold text-lg px-2 rounded ${score >= 75 ? 'metascore-good' : score < 50 ? 'metascore-bad' : 'metascore-average'}">${score}</span></div>` : '')(details.metacritic)}${steamStore ? `<a href="${steamStore.url}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 w-full text-center bg-gray-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors"><span>Ver en Steam</span></a>` : ''}</div></div>
-                            <div class="w-full lg:w-3/5"><h3 class="font-bold text-xl mb-2 text-indigo-400">Acerca de</h3><div class="text-gray-300 prose prose-invert max-h-48 overflow-y-auto mb-4">${details.description || 'Sin descripción.'}</div><h3 class="font-bold text-xl mb-2 text-indigo-400">Plataformas</h3><p class="text-gray-300 mb-4">${platforms || 'N/D'}</p><h3 class="font-bold text-xl mb-2 text-indigo-400">Género</h3><p class="text-gray-300 mb-4">${genres || 'N/D'}</p><div class="grid grid-cols-2 md:grid-cols-4 gap-2">${screenshotsHtml}</div></div>
+                card.innerHTML = `
+                    <div class="relative">
+                        <img src="${game.imageUrl}" alt="${game.title}" class="w-full h-40 object-cover">
+                        <div class="absolute top-2 right-2 px-2 py-1 text-xs font-bold text-white rounded-full ${statusColor}">${playtimeText}</div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-bold text-white truncate">${game.title}</h3>
+                        <div class="flex items-center mt-2">
+                             <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M12.1,2.6c-5.5,0-10,4.2-10,9.4c0,0,0,0,0,0c0,4,2.7,7.4,6.4,8.8l2.1-2.2c-0.8-0.3-1.5-0.8-2.1-1.4 c-1.2-1.3-1.8-3-1.8-4.7c0-3.7,3.3-6.8,7.4-6.8s7.4,3,7.4,6.8c0,1.8-0.7,3.6-2.1,4.9c-0.6,0.6-1.3,1.1-2.1,1.4l2.1,2.2 c3.7-1.4,6.4-4.8,6.4-8.8C22.1,6.8,17.6,2.6,12.1,2.6z M10,12.5c-0.8,0-1.5-0.7-1.5-1.5c0-0.8,0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5 C11.5,11.8,10.8,12.5,10,12.5z M14.2,12.5c-0.8,0-1.5-0.7-1.5-1.5c0-0.8,0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5 C15.7,11.8,15,12.5,14.2,12.5z"/></svg>
+                            <span class="text-sm text-gray-400">${game.platform}</span>
                         </div>
                     </div>
                 `;
-                detailsPanel.onclick = () => toggleDetails();
-            } catch (error) { detailsPanel.innerHTML = `<div class="relative w-full max-w-md bg-gray-800 p-6 rounded-xl"><p class="text-red-400">Error: ${error.message}</p><button onclick="window.toggleDetails()" class="mt-4 bg-indigo-600 px-4 py-2 rounded">Cerrar</button></div>`; }
-        };
+                container.appendChild(card);
+            });
+        }
+        
+        function renderStats(games) {
+            const totalGames = games.length;
+            const playedGames = games.filter(g => g.playtime > 0).length;
+            const totalHours = games.reduce((sum, g) => sum + g.playtime, 0).toFixed(0);
+
+            document.getElementById('stats-summary').textContent = 
+                `Total: ${totalGames} juegos | Jugados: ${playedGames} | Horas Totales: ${totalHours}`;
+        }
+
+        function main() {
+            fetchMyGames();
+        }
 
         main();
     </script>

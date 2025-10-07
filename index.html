@@ -7,7 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
-        body { font-family: 'Poppins', sans-serif; background-color: #0d1117; color: #e6e6e6; }
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #0d1117; 
+            color: #e6e6e6; 
+            /* Fondo con patrón de mandos */
+            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
+        }
         .spinner { border: 3px solid rgba(255, 255, 255, 0.3); border-top: 3px solid #818cf8; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #discover-card { transition: transform 0.4s ease, opacity 0.4s ease; cursor: grab; }
@@ -66,12 +72,23 @@
             <div id="library-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
         </section>
         
+        <section id="goty-section" class="mt-12">
+            <h2 class="text-2xl font-bold text-gray-200 border-b-2 border-amber-400 pb-2 mb-6">🏆 Salón de la Fama: Game of the Year</h2>
+            <div id="goty-container" class="relative pl-6 border-l-2 border-gray-700 space-y-8"></div>
+        </section>
+
         <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
+        <div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
     </main>
+
+    <footer class="max-w-7xl mx-auto w-full mt-12 py-6 text-center text-gray-500 border-t border-gray-700">
+        <p>Creado por Zaswear</p>
+        <button id="contact-btn" class="mt-2 text-indigo-400 hover:underline">Contacto</button>
+    </footer>
 
     <script type="module">
         let discoverGames = [], likedGames = [], dislikedGames = [], wishlistedGames = [], currentIndex = 0;
-        let currentView = 'vault';
+        let currentView = 'vault'; // 'vault' o 'wishlist'
 
         function renderNextCard() {
             const container = document.getElementById('discover-card-container');
@@ -104,8 +121,10 @@
                 transform = 'translateY(-100px) rotate(0deg)';
             }
             
-            if (currentView === 'vault' && action === 'like') renderMyLibrary();
-            if (currentView === 'wishlist' && action === 'wishlist') renderMyLibrary();
+            // Renderiza solo si la vista actual coincide con la acción o si es la bóveda por defecto
+            if ((currentView === 'vault' && action === 'like') || (currentView === 'wishlist' && action === 'wishlist')) {
+                renderMyLibrary();
+            }
             populateGenreFilter();
 
             cardElement.style.transform = transform;
@@ -127,12 +146,15 @@
             container.innerHTML = '';
             if (filteredList.length === 0) {
                 const message = currentView === 'vault' ? 'Tu bóveda está vacía.' : 'Tu lista de deseados está vacía.';
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">${message}</p>`;
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">${message} Empieza a añadir juegos usando los botones de arriba o recarga para ver más.</p>`;
             } else {
                 filteredList.forEach(game => {
                     const card = document.createElement('div');
                     card.className = 'cursor-pointer group transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/20';
-                    card.innerHTML = `<img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-auto aspect-[3/4] object-cover border-2 border-transparent group-hover:border-indigo-500">`;
+                    card.innerHTML = `
+                        <img src="${game.imageUrl}" alt="${game.title}" class="rounded-lg shadow-lg w-full h-auto aspect-[3/4] object-cover border-2 border-transparent group-hover:border-indigo-500">
+                        <p class="text-sm text-gray-300 mt-2 truncate">${game.title}</p>
+                    `;
                     card.onclick = () => toggleDetails(game.id);
                     container.appendChild(card);
                 });
@@ -207,6 +229,76 @@
         }
         window.toggleDetails = toggleDetails;
 
+        function renderGotyWinners() {
+            const container = document.getElementById('goty-container');
+            if (!container) return; // Defensive check
+            container.innerHTML = '';
+            const gotyWinners = [{ year: 2023, title: "Baldur's Gate 3", id: 41494 }, { year: 2022, title: "Elden Ring", id: 326249 }, { year: 2021, title: "It Takes Two", id: 457213 }, { year: 2020, title: "The Last of Us Part II", id: 3070 }, { year: 2019, title: "Sekiro: Shadows Die Twice", id: 28135 }, { year: 2018, title: "God of War", id: 5855 }, { year: 2017, title: "Zelda: Breath of the Wild", id: 3647 }, { year: 2016, title: "Overwatch", id: 556 }, { year: 2015, title: "The Witcher 3", id: 3328 }, { year: 2014, title: "Dragon Age: Inquisition", id: 3790 }];
+            gotyWinners.forEach(game => {
+                const item = document.createElement('div');
+                item.className = 'relative pl-8 cursor-pointer group';
+                item.innerHTML = `<div class="absolute -left-2.5 top-1 w-5 h-5 bg-gray-600 group-hover:bg-indigo-500 rounded-full border-4 border-gray-800 transition-colors"></div><p class="text-lg font-bold text-amber-300">${game.year}</p><h4 class="text-xl font-semibold text-gray-200 group-hover:text-white transition-colors">${game.title}</h4>`;
+                item.onclick = () => toggleDetails(game.id);
+                container.appendChild(item);
+            });
+        }
+
+        function toggleContactModal() {
+            const modal = document.getElementById('contact-modal');
+            const isOpen = !modal.classList.contains('hidden');
+            if(isOpen){
+                 modal.classList.add('hidden');
+                 modal.innerHTML = '';
+            } else {
+                modal.innerHTML = `
+                    <div class="relative w-full max-w-lg bg-gray-800 border-gray-700 rounded-xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
+                        <button onclick="window.toggleContactModal()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
+                        <h2 class="text-2xl font-bold text-indigo-400 mb-4">Contactar</h2>
+                        <div id="contact-status" class="mb-4"></div>
+                        <form id="contact-form">
+                            <div class="mb-4">
+                                <label for="subject" class="block text-gray-300 mb-1">Asunto</label>
+                                <input type="text" id="subject" class="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:border-indigo-500" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="message" class="block text-gray-300 mb-1">Mensaje</label>
+                                <textarea id="message" rows="5" class="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:border-indigo-500" required></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg">Enviar</button>
+                        </form>
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+                modal.onclick = toggleContactModal;
+                document.getElementById('contact-form').onsubmit = async (e) => {
+                    e.preventDefault();
+                    const btn = e.target.querySelector('button');
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner inline-block"></span>';
+                    const statusDiv = document.getElementById('contact-status');
+                    try {
+                        const response = await fetch('/api/sendEmail', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                subject: document.getElementById('subject').value,
+                                message: document.getElementById('message').value
+                            })
+                        });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.message);
+                        statusDiv.innerHTML = '<span class="text-green-400">¡Correo enviado con éxito!</span>';
+                        setTimeout(toggleContactModal, 2000);
+                    } catch (error) {
+                        statusDiv.innerHTML = `<span class="text-red-400">Error: ${error.message}</span>`;
+                        btn.disabled = false;
+                        btn.innerHTML = 'Enviar';
+                    }
+                };
+            }
+        }
+        window.toggleContactModal = toggleContactModal;
+        
         function exportLibraryToTxt() {
             const listToExport = currentView === 'vault' ? likedGames : wishlistedGames;
             const title = currentView === 'vault' ? 'Mi Bóveda de Juegos' : 'Mi Lista de Deseados';
@@ -228,7 +320,12 @@
             document.getElementById('library-search').oninput = renderMyLibrary;
             document.getElementById('genre-filter').onchange = renderMyLibrary;
             document.getElementById('export-btn').onclick = exportLibraryToTxt;
-            document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') handleSwipe('dislike'); if (e.key === 'ArrowRight') handleSwipe('like'); });
+            document.getElementById('contact-btn').onclick = toggleContactModal; // Conecta el botón de contacto
+            
+            document.addEventListener('keydown', (e) => { 
+                if (e.key === 'ArrowLeft') handleSwipe('dislike');
+                if (e.key === 'ArrowRight') handleSwipe('like');
+            });
 
             const vaultBtn = document.getElementById('show-vault-btn');
             const wishlistBtn = document.getElementById('show-wishlist-btn');
@@ -256,6 +353,7 @@
             vaultBtn.classList.add('active'); // Iniciar en la vista de la bóveda
             renderMyLibrary();
             populateGenreFilter();
+            renderGotyWinners(); // Asegúrate de que los GOTY también se carguen
 
             try {
                 const response = await fetch(`/api/getDiscoverGames?cacheBust=${new Date().getTime()}`);
@@ -266,7 +364,7 @@
                 renderNextCard();
             } catch (error) {
                 console.error(error);
-                document.getElementById('discover-card-container').innerHTML = `<div class="bg-gray-800 rounded-lg flex items-center justify-center h-full text-center p-4"><p class="text-red-400">${error.message}</p></div>`;
+                document.getElementById('discover-card-container').innerHTML = `<div class="bg-gray-800 rounded-lg flex items-center justify-center h-full text-center p-4"><p class="text-red-400">Error al cargar juegos: ${error.message}. Por favor, recarga la página.</p></div>`;
             }
         }
 

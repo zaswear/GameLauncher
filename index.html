@@ -34,7 +34,12 @@
         </header>
 
         <section id="discover-section" class="mb-12 flex flex-col items-center">
-            <div id="discover-card-container" class="relative w-full max-w-sm h-96"></div>
+            <div id="discover-card-container" class="relative w-full max-w-sm h-96">
+                <div class="bg-gray-800 rounded-lg flex flex-col items-center justify-center h-full text-center p-4">
+                    <span class="spinner mb-4"></span>
+                    <p class="text-gray-400">Cargando juegos para descubrir...</p>
+                </div>
+            </div>
             <div id="discover-buttons" class="flex items-center gap-4 mt-6">
                 <button id="dislike-btn" class="w-20 h-20 bg-red-800/20 text-red-400 rounded-full flex items-center justify-center text-4xl font-bold transition-transform hover:scale-110 hover:bg-red-800/40">❌</button>
                 <button id="wishlist-btn" class="w-16 h-16 bg-yellow-800/20 text-yellow-400 rounded-full flex items-center justify-center text-3xl font-bold transition-transform hover:scale-110 hover:bg-yellow-800/40">⭐</button>
@@ -44,12 +49,12 @@
 
         <section id="library-section">
             <div class="border-b-2 border-gray-700 pb-2 mb-6">
-                <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                      <div class="flex p-1 bg-gray-800 rounded-lg">
                         <button id="show-vault-btn" class="view-btn px-4 py-2 rounded-md text-sm font-semibold">Mi Bóveda</button>
                         <button id="show-wishlist-btn" class="view-btn px-4 py-2 rounded-md text-sm font-semibold">Lista de Deseados</button>
                     </div>
-                    <button id="export-btn" class="text-sm bg-gray-700 hover:bg-indigo-600 p-2 rounded-md transition-colors mt-4 sm:mt-0" title="Exportar a .txt">
+                    <button id="export-btn" class="text-sm bg-gray-700 hover:bg-indigo-600 p-2 rounded-md transition-colors" title="Exportar a .txt">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     </button>
                 </div>
@@ -66,10 +71,17 @@
 
     <script type="module">
         let discoverGames = [], likedGames = [], dislikedGames = [], wishlistedGames = [], currentIndex = 0;
-        let currentView = 'vault'; // 'vault' o 'wishlist'
+        let currentView = 'vault';
 
         function renderNextCard() {
-            // ... (Sin cambios)
+            const container = document.getElementById('discover-card-container');
+            if (currentIndex >= discoverGames.length) {
+                container.innerHTML = `<div class="bg-gray-800 rounded-lg flex flex-col items-center justify-center h-full text-center p-4"><h3 class="text-2xl font-bold text-white mb-2">¡Has visto todo!</h3><p class="text-gray-400">Recarga la página para obtener una nueva selección.</p></div>`;
+                document.getElementById('discover-buttons').style.display = 'none';
+                return;
+            }
+            const game = discoverGames[currentIndex];
+            container.innerHTML = `<div id="discover-card" class="absolute inset-0 bg-gray-800 rounded-lg shadow-2xl overflow-hidden"><img src="${game.imageUrl}" class="w-full h-full object-cover"><div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent"><h3 class="text-2xl font-bold text-white">${game.title}</h3></div></div>`;
         }
 
         function handleSwipe(action) {
@@ -92,8 +104,8 @@
                 transform = 'translateY(-100px) rotate(0deg)';
             }
             
-            if (currentView === 'vault') renderMyLibrary();
-            if (currentView === 'wishlist') renderMyWishlist();
+            if (currentView === 'vault' && action === 'like') renderMyLibrary();
+            if (currentView === 'wishlist' && action === 'wishlist') renderMyLibrary();
             populateGenreFilter();
 
             cardElement.style.transform = transform;
@@ -114,7 +126,8 @@
 
             container.innerHTML = '';
             if (filteredList.length === 0) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">La lista está vacía o no hay juegos que coincidan.</p>`;
+                const message = currentView === 'vault' ? 'Tu bóveda está vacía.' : 'Tu lista de deseados está vacía.';
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">${message}</p>`;
             } else {
                 filteredList.forEach(game => {
                     const card = document.createElement('div');
@@ -150,9 +163,50 @@
             toggleDetails();
         }
         
-        async function toggleDetails(gameId) { /* ... (sin cambios, el código de la versión anterior es correcto) ... */ }
+        async function toggleDetails(gameId) {
+            const detailsPanel = document.getElementById('details-panel');
+            const isOpen = !detailsPanel.classList.contains('hidden');
+            if (isOpen || !gameId) { detailsPanel.classList.add('hidden'); detailsPanel.innerHTML = ''; return; }
+
+            detailsPanel.innerHTML = `<div class="w-full max-w-5xl text-center py-20 text-lg text-indigo-400">Cargando detalles... <span class="spinner inline-block ml-2"></span></div>`;
+            detailsPanel.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`/api/getGameDetails?id=${gameId}`);
+                if (!response.ok) throw new Error('No se pudieron cargar los detalles.');
+                const details = await response.json();
+                
+                let scoreClass = 'metascore-average';
+                if (details.metacritic >= 75) scoreClass = 'metascore-good';
+                if (details.metacritic < 50 && details.metacritic > 0) scoreClass = 'metascore-bad';
+
+                detailsPanel.innerHTML = `
+                    <div class="relative w-full max-w-5xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
+                        <h2 class="text-4xl lg:text-6xl font-bold text-white mb-4">${details.name}</h2>
+                        <div class="flex flex-col lg:flex-row gap-6">
+                            <div class="w-full lg:w-2/5 flex-shrink-0">
+                                <img src="${details.background_image}" class="rounded-lg shadow-lg w-full mb-4">
+                                <div class="space-y-3">
+                                    ${details.metacritic ? `<div class="flex items-center gap-2"><svg class="w-6 h-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#242424"/><path d="M78.62 21.38V78.62H21.38V21.38H78.62ZM87.5 12.5H12.5V87.5H87.5V12.5Z" fill="white"/><path d="M45.56 65.5V36.68H38.3V30H61.7V36.68H54.44V65.5H45.56Z" fill="white"/></svg><span class="font-bold text-gray-300">Metacritic</span><span class="font-bold text-lg px-2 rounded ${scoreClass}">${details.metacritic}</span></div>` : ''}
+                                    ${details.stores?.find(s => s.store.slug === 'steam') ? `<a href="${details.stores.find(s => s.store.slug === 'steam').url}" target="_blank" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Ver en Steam</a>` : ''}
+                                    <button id="delete-btn" class="w-full bg-red-800 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg">Eliminar de esta lista</button>
+                                </div>
+                            </div>
+                            <div class="w-full lg:w-3/5">
+                                <h3 class="font-bold text-xl mb-2 text-indigo-400">Acerca de</h3>
+                                <div class="text-gray-300 text-sm max-h-48 overflow-y-auto mb-4">${details.description_raw || 'Sin descripción.'}</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">${details.short_screenshots?.slice(0, 4).map(ss => `<img src="${ss.image}" class="rounded-md h-24 w-full object-cover">`).join('') || ''}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                detailsPanel.onclick = () => toggleDetails();
+                document.getElementById('delete-btn').onclick = () => deleteFromLibrary(gameId);
+            } catch (error) { detailsPanel.innerHTML = `<div class="relative w-full max-w-md bg-gray-800 p-6 rounded-xl"><p class="text-red-400">Error: ${error.message}</p><button onclick="window.toggleDetails()" class="mt-4 bg-indigo-600 px-4 py-2 rounded">Cerrar</button></div>`; }
+        }
         window.toggleDetails = toggleDetails;
-        
+
         function exportLibraryToTxt() {
             const listToExport = currentView === 'vault' ? likedGames : wishlistedGames;
             const title = currentView === 'vault' ? 'Mi Bóveda de Juegos' : 'Mi Lista de Deseados';
@@ -160,7 +214,7 @@
             const textContent = `${title}\n\n` + listToExport.map(g => `- ${g.title}`).join('\n');
             const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
             const anchor = document.createElement('a');
-            anchor.download = `${title.replace(' ', '_')}.txt`;
+            anchor.download = `${title.replace(/\s/g, '_')}.txt`;
             anchor.href = window.URL.createObjectURL(blob);
             anchor.click();
             window.URL.revokeObjectURL(anchor.href);
@@ -174,7 +228,8 @@
             document.getElementById('library-search').oninput = renderMyLibrary;
             document.getElementById('genre-filter').onchange = renderMyLibrary;
             document.getElementById('export-btn').onclick = exportLibraryToTxt;
-            
+            document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') handleSwipe('dislike'); if (e.key === 'ArrowRight') handleSwipe('like'); });
+
             const vaultBtn = document.getElementById('show-vault-btn');
             const wishlistBtn = document.getElementById('show-wishlist-btn');
 
@@ -198,7 +253,7 @@
             dislikedGames = JSON.parse(localStorage.getItem('dislikedGames')) || [];
             wishlistedGames = JSON.parse(localStorage.getItem('wishlistedGames')) || [];
             
-            vaultBtn.classList.add('active');
+            vaultBtn.classList.add('active'); // Iniciar en la vista de la bóveda
             renderMyLibrary();
             populateGenreFilter();
 
@@ -215,8 +270,6 @@
             }
         }
 
-        // Se pega aquí el resto del código para que esté completo
-        // (Omitido en este bloque de pensamiento por brevedad)
         main();
     </script>
 </body>

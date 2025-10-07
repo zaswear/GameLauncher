@@ -158,8 +158,9 @@
                     }
                 };
             }
+        }
 
-            function initGameRoulette() {
+        function initGameRoulette() {
             const view = document.getElementById('game-roulette-view');
             view.innerHTML = `
                 <div class="text-center">
@@ -180,7 +181,7 @@
                 } catch (error) { resultSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`; }
             });
         }
-        }
+
         window.toggleContactModal = toggleContactModal;
 
         function main() {

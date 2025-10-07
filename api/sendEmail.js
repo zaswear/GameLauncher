@@ -1,4 +1,3 @@
-// /api/sendEmail.js
 import nodemailer from 'nodemailer';
 
 export default async function handler(request, response) {

@@ -1,15 +1,12 @@
-// Contenido para /api/getGameDetails.js
 export default async function handler(request, response) {
     const RAWG_API_KEY = process.env.RAWG_API_KEY;
     if (!RAWG_API_KEY) { return response.status(500).json({ message: "La clave de API de RAWG no está configurada." }); }
     try {
         const urlParams = new URL(request.url, `https://${request.headers.host}`).searchParams;
         const gameId = urlParams.get('id');
-        const lang = urlParams.get('lang') || 'es'; // 'es' por defecto
-
+        const lang = urlParams.get('lang') || 'es';
         if (!gameId) { return response.status(400).json({ message: "No se proporcionó un ID de juego." }); }
         
-        // Añadimos el parámetro de idioma a la petición de detalles
         const url = `https://api.rawg.io/api/games/${gameId}?key=${RAWG_API_KEY}&lang=${lang}`;
         
         const apiResponse = await fetch(url);

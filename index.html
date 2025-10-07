@@ -31,7 +31,12 @@
         </header>
 
         <section id="discover-section" class="mb-12 flex flex-col items-center">
-            <div id="discover-card-container" class="relative w-full max-w-sm h-96"></div>
+            <div id="discover-card-container" class="relative w-full max-w-sm h-96">
+                 <div class="bg-gray-800 rounded-lg flex flex-col items-center justify-center h-full text-center p-4">
+                    <span class="spinner mb-4"></span>
+                    <p class="text-gray-400">Cargando juegos para descubrir...</p>
+                </div>
+            </div>
             <div id="discover-buttons" class="flex gap-8 mt-6">
                 <button id="dislike-btn" class="w-20 h-20 bg-red-800/20 text-red-400 rounded-full flex items-center justify-center text-4xl font-bold transition-transform hover:scale-110 hover:bg-red-800/40">❌</button>
                 <button id="like-btn" class="w-20 h-20 bg-green-800/20 text-green-400 rounded-full flex items-center justify-center text-4xl font-bold transition-transform hover:scale-110 hover:bg-green-800/40">💚</button>
@@ -56,7 +61,7 @@
             <h2 class="text-2xl font-bold text-gray-200 border-b-2 border-amber-400 pb-2 mb-6">🏆 Salón de la Fama: Game of the Year</h2>
             <div id="goty-container" class="relative pl-6 border-l-2 border-gray-700 space-y-8"></div>
         </section>
-
+        
         <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
         <div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
     </main>
@@ -109,7 +114,7 @@
             if (selectedGenre) filteredLibrary = filteredLibrary.filter(game => game.genres.includes(selectedGenre));
             container.innerHTML = '';
             if (filteredLibrary.length === 0) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">Tu bóveda está vacía o no hay juegos que coincidan con tus filtros.</p>`;
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">Tu bóveda está vacía o no hay juegos que coincidan.</p>`;
             } else {
                 filteredLibrary.forEach(game => {
                     const card = document.createElement('div');
@@ -141,8 +146,7 @@
         
         async function toggleDetails(gameId) {
             const detailsPanel = document.getElementById('details-panel');
-            const isOpen = !detailsPanel.classList.contains('hidden');
-            if (isOpen || !gameId) { detailsPanel.classList.add('hidden'); detailsPanel.innerHTML = ''; return; }
+            if (!gameId || !detailsPanel) { detailsPanel.classList.add('hidden'); detailsPanel.innerHTML = ''; return; }
             detailsPanel.innerHTML = `<div class="w-full max-w-5xl text-center py-20 text-lg text-indigo-400">Cargando detalles... <span class="spinner inline-block ml-2"></span></div>`;
             detailsPanel.classList.remove('hidden');
             try {
@@ -152,26 +156,7 @@
                 let scoreClass = 'metascore-average';
                 if (details.metacritic >= 75) scoreClass = 'metascore-good';
                 if (details.metacritic < 50 && details.metacritic > 0) scoreClass = 'metascore-bad';
-                detailsPanel.innerHTML = `
-                    <div class="relative w-full max-w-5xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-                        <button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button>
-                        <h2 class="text-4xl lg:text-6xl font-bold text-white mb-4">${details.name}</h2>
-                        <div class="flex flex-col lg:flex-row gap-6">
-                            <div class="w-full lg:w-2/5 flex-shrink-0">
-                                <img src="${details.background_image}" class="rounded-lg shadow-lg w-full mb-4">
-                                <div class="space-y-3">
-                                    ${details.metacritic ? `<div class="flex items-center gap-2"><svg class="w-6 h-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#242424"/><path d="M78.62 21.38V78.62H21.38V21.38H78.62ZM87.5 12.5H12.5V87.5H87.5V12.5Z" fill="white"/><path d="M45.56 65.5V36.68H38.3V30H61.7V36.68H54.44V65.5H45.56Z" fill="white"/></svg><span class="font-bold text-gray-300">Metacritic</span><span class="font-bold text-lg px-2 rounded ${scoreClass}">${details.metacritic}</span></div>` : ''}
-                                    ${details.stores?.find(s => s.store.slug === 'steam') ? `<a href="${details.stores.find(s => s.store.slug === 'steam').url}" target="_blank" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Ver en Steam</a>` : ''}
-                                    <button id="delete-btn" class="w-full bg-red-800 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg">Eliminar de la Bóveda</button>
-                                </div>
-                            </div>
-                            <div class="w-full lg:w-3/5">
-                                <h3 class="font-bold text-xl mb-2 text-indigo-400">Acerca de</h3>
-                                <div class="text-gray-300 text-sm max-h-48 overflow-y-auto mb-4">${details.description_raw || 'Sin descripción.'}</div>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">${details.short_screenshots?.slice(0, 4).map(ss => `<img src="${ss.image}" class="rounded-md h-24 w-full object-cover">`).join('') || ''}</div>
-                            </div>
-                        </div>
-                    </div>`;
+                detailsPanel.innerHTML = `<div class="relative w-full max-w-5xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 m-4 modal-enter max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()"><button onclick="window.toggleDetails()" class="absolute top-2 right-4 text-3xl font-light text-gray-400 hover:text-white">&times;</button><h2 class="text-4xl lg:text-6xl font-bold text-white mb-4">${details.name}</h2><div class="flex flex-col lg:flex-row gap-6"><div class="w-full lg:w-2/5 flex-shrink-0"><img src="${details.background_image}" class="rounded-lg shadow-lg w-full mb-4"><div class="space-y-3">${details.metacritic ? `<div class="flex items-center gap-2"><svg class="w-6 h-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#242424"/><path d="M78.62 21.38V78.62H21.38V21.38H78.62ZM87.5 12.5H12.5V87.5H87.5V12.5Z" fill="white"/><path d="M45.56 65.5V36.68H38.3V30H61.7V36.68H54.44V65.5H45.56Z" fill="white"/></svg><span class="font-bold text-gray-300">Metacritic</span><span class="font-bold text-lg px-2 rounded ${scoreClass}">${details.metacritic}</span></div>` : ''}${details.stores?.find(s => s.store.slug === 'steam') ? `<a href="${details.stores.find(s => s.store.slug === 'steam').url}" target="_blank" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Ver en Steam</a>` : ''}<button id="delete-btn" class="w-full bg-red-800 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg">Eliminar de la Bóveda</button></div></div><div class="w-full lg:w-3/5"><h3 class="font-bold text-xl mb-2 text-indigo-400">Acerca de</h3><div class="text-gray-300 text-sm max-h-48 overflow-y-auto mb-4">${details.description_raw || 'Sin descripción.'}</div><div class="grid grid-cols-2 md:grid-cols-4 gap-2">${details.short_screenshots?.slice(0, 4).map(ss => `<img src="${ss.image}" class="rounded-md h-24 w-full object-cover">`).join('') || ''}</div></div></div></div>`;
                 detailsPanel.onclick = () => toggleDetails();
                 document.getElementById('delete-btn').onclick = () => deleteFromLibrary(gameId);
             } catch (error) { detailsPanel.innerHTML = `<div class="relative w-full max-w-md bg-gray-800 p-6 rounded-xl"><p class="text-red-400">Error: ${error.message}</p><button onclick="window.toggleDetails()" class="mt-4 bg-indigo-600 px-4 py-2 rounded">Cerrar</button></div>`; }
@@ -180,6 +165,7 @@
 
         function renderGotyWinners() {
             const container = document.getElementById('goty-container');
+            if (!container) return; // Defensive check
             container.innerHTML = '';
             const gotyWinners = [{ year: 2023, title: "Baldur's Gate 3", id: 41494 }, { year: 2022, title: "Elden Ring", id: 326249 }, { year: 2021, title: "It Takes Two", id: 457213 }, { year: 2020, title: "The Last of Us Part II", id: 3070 }, { year: 2019, title: "Sekiro: Shadows Die Twice", id: 28135 }, { year: 2018, title: "God of War", id: 5855 }, { year: 2017, title: "Zelda: Breath of the Wild", id: 3647 }, { year: 2016, title: "Overwatch", id: 556 }, { year: 2015, title: "The Witcher 3", id: 3328 }, { year: 2014, title: "Dragon Age: Inquisition", id: 3790 }];
             gotyWinners.forEach(game => {
@@ -235,7 +221,7 @@
         function exportLibraryToTxt() {
             const library = JSON.parse(localStorage.getItem('likedGames')) || [];
             if (library.length === 0) { alert('Tu bóveda está vacía.'); return; }
-            const textContent = "Mi GameVault\n\n" + library.map(g => `- ${g.title}`).join('\n');
+            const textContent = "MyGameVault - Tus Juegos Favoritos\n\n" + library.map(g => `- ${g.title}`).join('\n');
             const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
             const anchor = document.createElement('a');
             anchor.download = 'MyGameVault.txt';
@@ -245,7 +231,6 @@
         }
 
         async function main() {
-            document.getElementById('current-date').textContent = `Hoy es ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
             document.getElementById('like-btn').onclick = () => handleSwipe('like');
             document.getElementById('dislike-btn').onclick = () => handleSwipe('dislike');
             document.getElementById('library-search').oninput = renderMyLibrary;

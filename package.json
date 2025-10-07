@@ -1,8 +1,9 @@
 {
-  "name": "game-launcher-app",
+  "name": "my-game-vault",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.7"
   }
 }

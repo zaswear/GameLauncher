@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game-Match | What To Play?</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+        body { font-family: 'Poppins', sans-serif; background-color: #0d1117; color: #e6e6e6; }
+        .spinner { border: 3px solid rgba(255, 255, 255, 0.3); border-top: 3px solid #818cf8; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .result-card { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <main class="max-w-3xl mx-auto text-center">
+        <a href="/" class="text-indigo-400 hover:underline mb-8 inline-block">&larr; Volver al inicio</a>
+        
+        <header class="mb-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white">🧠 Game-Match</h1>
+            <p class="text-gray-400 mt-2">Introduce hasta 3 de tus juegos favoritos y encontraremos tu próxima obsesión.</p>
+        </header>
+
+        <div id="input-section" class="space-y-4 mb-8">
+            <input type="text" id="game-input-1" placeholder="Ej: The Witcher 3: Wild Hunt" class="w-full p-4 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition">
+            <input type="text" id="game-input-2" placeholder="Ej: Hades" class="w-full p-4 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition">
+            <input type="text" id="game-input-3" placeholder="Ej: Stardew Valley" class="w-full p-4 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition">
+        </div>
+
+        <button id="match-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+            ¡Encontrar mi Match!
+        </button>
+
+        <section id="result-section" class="mt-12"></section>
+
+    </main>
+    
+    <script type="module">
+        const matchBtn = document.getElementById('match-btn');
+        const resultSection = document.getElementById('result-section');
+
+        matchBtn.addEventListener('click', async () => {
+            const game1 = document.getElementById('game-input-1').value.trim();
+            const game2 = document.getElementById('game-input-2').value.trim();
+            const game3 = document.getElementById('game-input-3').value.trim();
+
+            const favorites = [game1, game2, game3].filter(name => name !== '');
+
+            if (favorites.length === 0) {
+                resultSection.innerHTML = `<p class="text-red-400">Por favor, introduce al menos un juego.</p>`;
+                return;
+            }
+
+            resultSection.innerHTML = `<div class="flex flex-col items-center justify-center"><span class="spinner"></span><p class="mt-4 text-gray-400">Analizando tu perfil de gusto y buscando la joya perfecta...</p></div>`;
+            matchBtn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/get-game-match?favorites=${favorites.join(',')}`);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'No se pudo encontrar una recomendación.');
+                }
+                
+                renderResult(result);
+
+            } catch (error) {
+                resultSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
+            } finally {
+                matchBtn.disabled = false;
+            }
+        });
+
+        function renderResult(game) {
+            resultSection.innerHTML = `
+                <div class="result-card bg-gray-800 rounded-lg p-6 text-left">
+                    <h2 class="text-2xl font-bold text-indigo-400 mb-4">Tu Match Perfecto es...</h2>
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <img src="${game.background_image}" class="w-full md:w-1/3 rounded-lg object-cover">
+                        <div>
+                            <h3 class="text-3xl font-bold text-white">${game.name}</h3>
+                            <p class="text-gray-400 mt-2">${game.released}</p>
+                            <p class="text-sm text-gray-300 mt-4">${getShortDescription(game.description_raw)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getShortDescription(description) {
+            if (!description) return "No hay descripción disponible.";
+            // Trunca la descripción a unos 300 caracteres
+            return description.length > 300 ? description.substring(0, 300) + '...' : description;
+        }
+
+    </script>
+
+</body>
+</html>

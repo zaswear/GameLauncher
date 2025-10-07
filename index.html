@@ -77,6 +77,7 @@
                 likedGames.unshift(game);
                 localStorage.setItem('likedGames', JSON.stringify(likedGames));
                 renderMyLibrary();
+                populateGenreFilter(); // <-- CORRECCIÓN: Actualizar filtros al dar like
                 cardElement.style.transform = 'translateX(100px) rotate(15deg)';
             } else {
                 dislikedGames.push(game.id);
@@ -95,16 +96,12 @@
             
             let filteredLibrary = likedGames;
 
-            if (searchTerm) {
-                filteredLibrary = filteredLibrary.filter(game => game.title.toLowerCase().includes(searchTerm));
-            }
-            if (selectedGenre) {
-                filteredLibrary = filteredLibrary.filter(game => game.genres.includes(selectedGenre));
-            }
+            if (searchTerm) filteredLibrary = filteredLibrary.filter(game => game.title.toLowerCase().includes(searchTerm));
+            if (selectedGenre) filteredLibrary = filteredLibrary.filter(game => game.genres.includes(selectedGenre));
 
             container.innerHTML = '';
             if (filteredLibrary.length === 0) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">No hay juegos que coincidan con tus filtros.</p>`;
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">Tu bóveda está vacía o no hay juegos que coincidan con tus filtros.</p>`;
             } else {
                 filteredLibrary.forEach(game => {
                     const card = document.createElement('div');
@@ -132,7 +129,7 @@
             localStorage.setItem('likedGames', JSON.stringify(likedGames));
             renderMyLibrary();
             populateGenreFilter();
-            toggleDetails(); // Cierra el modal
+            toggleDetails();
         }
         
         async function toggleDetails(gameId) {
@@ -175,7 +172,7 @@
                 `;
                 detailsPanel.onclick = () => toggleDetails();
                 document.getElementById('delete-btn').onclick = () => deleteFromLibrary(gameId);
-            } catch (error) { /* ... manejo de error ... */ }
+            } catch (error) { detailsPanel.innerHTML = `<div class="relative w-full max-w-md bg-gray-800 p-6 rounded-xl"><p class="text-red-400">Error: ${error.message}</p><button onclick="window.toggleDetails()" class="mt-4 bg-indigo-600 px-4 py-2 rounded">Cerrar</button></div>`; }
         }
         window.toggleDetails = toggleDetails;
 
@@ -192,7 +189,8 @@
             populateGenreFilter();
 
             try {
-                const response = await fetch('/api/getDiscoverGames');
+                // <-- CORRECCIÓN: Añadir un parámetro aleatorio para evitar la caché del navegador/servidor
+                const response = await fetch(`/api/getDiscoverGames?cacheBust=${new Date().getTime()}`);
                 if (!response.ok) throw new Error('No se pudo cargar la lista de juegos para descubrir.');
                 const allFetchedGames = await response.json();
                 const seenGames = new Set([...dislikedGames, ...likedGames.map(g => g.id)]);

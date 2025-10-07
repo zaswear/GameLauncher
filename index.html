@@ -42,85 +42,89 @@
     </main>
     
     <script type="module">
-        let selectedGames = [null, null, null]; // Almacenará los objetos de juego confirmados
-        
-        function showView(viewId) { /* ... (sin cambios) ... */ }
-        function initTimeMachine() { /* ... (sin cambios) ... */ }
-        function initCoopDecider() { /* ... (sin cambios) ... */ }
+        const views = document.querySelectorAll('.view-section');
+        const tabs = document.querySelectorAll('.tab-btn');
+
+        function showView(viewId) {
+            views.forEach(view => view.classList.remove('active'));
+            tabs.forEach(tab => tab.classList.remove('active'));
+            document.getElementById(viewId + '-view').classList.add('active');
+            document.querySelector(`[data-view='${viewId}']`).classList.add('active');
+        }
 
         function initGameMatch() {
             const view = document.getElementById('game-match-view');
-            view.innerHTML = `
-                <div class="text-center">
-                    <h2 class="text-3xl font-bold text-white">Encuentra tu Próxima Obsesión</h2>
-                    <p class="text-gray-400 mt-2 mb-8">Escribe el nombre de un juego, espera las sugerencias y selecciona el correcto.</p>
-                    <div class="space-y-4 max-w-lg mx-auto mb-8">
-                        ${[1, 2, 3].map(i => `
-                            <div class="relative">
-                                <input type="text" id="game-input-${i}" placeholder="Juego Favorito #${i}" class="w-full p-4 rounded-lg bg-gray-800 text-white border-2 border-gray-700">
-                                <div id="suggestions-${i}" class="absolute z-10 w-full bg-gray-700 rounded-b-lg overflow-hidden"></div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <button id="match-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg">¡Encontrar mi Match!</button>
-                    <section id="result-section" class="mt-12"></section>
-                </div>`;
+            view.innerHTML = `<div class="text-center"><h2 class="text-3xl font-bold text-white">Encuentra tu Próxima Obsesión</h2><p class="text-gray-400 mt-2 mb-8">Introduce hasta 3 de tus juegos favoritos y nuestro algoritmo encontrará tu match perfecto.</p><div class="space-y-4 max-w-lg mx-auto mb-8"><input type="text" id="game-input-1" placeholder="Ej: The Witcher 3" class="w-full p-4 rounded-lg bg-gray-800 border-2 border-gray-700"><input type="text" id="game-input-2" placeholder="Ej: Hades" class="w-full p-4 rounded-lg bg-gray-800 border-2 border-gray-700"><input type="text" id="game-input-3" placeholder="Ej: Stardew Valley" class="w-full p-4 rounded-lg bg-gray-800 border-2 border-gray-700"></div><button id="match-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg">¡Encontrar mi Match!</button><section id="result-section" class="mt-12"></section></div>`;
             
-            let searchTimeout;
-            [1, 2, 3].forEach(i => {
-                const input = document.getElementById(`game-input-${i}`);
-                const suggestionsContainer = document.getElementById(`suggestions-${i}`);
-
-                input.addEventListener('input', () => {
-                    clearTimeout(searchTimeout);
-                    const query = input.value.trim();
-                    if (query.length < 3) {
-                        suggestionsContainer.innerHTML = '';
-                        return;
-                    }
-                    searchTimeout = setTimeout(async () => {
-                        const response = await fetch(`/api/search-games?query=${query}`);
-                        const suggestions = await response.json();
-                        suggestionsContainer.innerHTML = suggestions.map(game => 
-                            `<div class="p-3 hover:bg-indigo-600 cursor-pointer" data-game-id="${game.id}" data-game-name="${game.name}">
-                                ${game.name} <span class="text-gray-400">(${game.year})</span>
-                            </div>`
-                        ).join('');
-                    }, 300);
-                });
-
-                suggestionsContainer.addEventListener('click', (e) => {
-                    if (e.target.dataset.gameId) {
-                        const gameId = parseInt(e.target.dataset.gameId);
-                        const gameName = e.target.dataset.gameName;
-                        selectedGames[i - 1] = { id: gameId, name: gameName };
-                        input.value = gameName;
-                        suggestionsContainer.innerHTML = '';
-                    }
-                });
-            });
-
             document.getElementById('match-btn').addEventListener('click', async () => {
-                const favoriteIds = selectedGames.filter(Boolean).map(g => g.id);
+                const favorites = [document.getElementById('game-input-1').value.trim(), document.getElementById('game-input-2').value.trim(), document.getElementById('game-input-3').value.trim()].filter(Boolean);
                 const resultSection = document.getElementById('result-section');
-                if (favoriteIds.length === 0) { resultSection.innerHTML = `<p class="text-red-400">Por favor, selecciona al menos un juego de la lista.</p>`; return; }
-                
+                if (favorites.length === 0) { resultSection.innerHTML = `<p class="text-red-400">Introduce al menos un juego.</p>`; return; }
                 resultSection.innerHTML = `<div class="flex flex-col items-center"><span class="spinner"></span><p class="mt-4">Analizando tu perfil...</p></div>`;
                 try {
-                    const response = await fetch(`/api/get-game-match?ids=${favoriteIds.join(',')}`);
+                    const response = await fetch(`/api/get-game-match?favorites=${favorites.join(',')}`);
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.message);
                     resultSection.innerHTML = `<div class="bg-gray-800 rounded-lg p-6 text-left animate-fadeIn"><h2 class="text-2xl font-bold text-indigo-400 mb-4">Tu Match Perfecto es...</h2><div class="flex flex-col md:flex-row gap-6"><img src="${result.background_image}" class="w-full md:w-1/3 rounded-lg object-cover"><div><h3 class="text-3xl font-bold">${result.name}</h3><p class="mt-2 text-gray-400">${new Date(result.released).getFullYear()}</p><div class="mt-4"><span class="bg-green-500 text-white font-bold py-1 px-3 rounded-full text-sm">${result.metacritic || '?'}</span><span class="ml-2 text-gray-300">Metacritic</span></div></div></div></div>`;
                 } catch (error) { resultSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`; }
             });
         }
-        
-        // --- Pegar aquí el código completo de las otras funciones (initTimeMachine, initCoopDecider, showView) ---
-        // Se omite por brevedad, pero usa las versiones de la respuesta anterior.
-        showView = (viewId) => { views.forEach(v => v.classList.remove('active')); tabs.forEach(t => t.classList.remove('active')); document.getElementById(viewId + '-view').classList.add('active'); document.querySelector(`[data-view='${viewId}']`).classList.add('active'); };
-        initTimeMachine = () => { const view = document.getElementById('time-machine-view'); const currentYear = new Date().getFullYear(); let yearsHtml = ''; for (let i = 0; i < 20; i++) { yearsHtml += `<option value="${currentYear - i}">${currentYear - i}</option>`; } view.innerHTML = `<div class="text-center"><h2 class="text-3xl font-bold">La Máquina del Tiempo Gamer</h2><p class="text-gray-400 mt-2 mb-8">Selecciona un año y descubre sus juegos mejor valorados.</p><select id="year-selector" class="p-4 rounded-lg bg-gray-800 border-2 border-gray-700 mb-8">${yearsHtml}</select><div id="time-machine-results" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div></div>`; const yearSelector = document.getElementById('year-selector'); const loadYear = async (year) => { const resultsContainer = document.getElementById('time-machine-results'); resultsContainer.innerHTML = `<div class="col-span-full flex justify-center py-10"><span class="spinner"></span></div>`; try { const response = await fetch(`/api/get-games-by-year?year=${year}`); const games = await response.json(); resultsContainer.innerHTML = ''; if (games.length === 0) { resultsContainer.innerHTML = `<p class="col-span-full text-gray-400">No se encontraron juegos con alta puntuación para ${year}.</p>`; return; } games.forEach(game => { resultsContainer.innerHTML += `<div class="bg-gray-800 rounded-lg overflow-hidden"><img src="${game.background_image}" class="w-full h-40 object-cover"><div class="p-3"><p class="font-bold truncate">${game.name}</p><p class="text-sm text-green-400">Metacritic: ${game.metacritic || 'N/A'}</p></div></div>`; }); } catch (error) { resultsContainer.innerHTML = `<p class="col-span-full text-red-400">No se pudieron cargar los juegos de ${year}.</p>`; } }; yearSelector.addEventListener('change', () => loadYear(yearSelector.value)); loadYear(currentYear); };
-        initCoopDecider = () => { const view = document.getElementById('co-op-decider-view'); view.innerHTML = `<div class="text-center"><h2 class="text-3xl font-bold">El Oráculo Co-op</h2><p class="text-gray-400 mt-2 mb-8">Seleccionen las plataformas que todos tienen y dejen que el destino decida.</p><div id="platform-selector" class="flex justify-center flex-wrap gap-4 mb-8"><button data-platform="4" class="p-4 bg-gray-700 rounded-lg font-semibold">PC</button><button data-platform="187" class="p-4 bg-gray-700 rounded-lg font-semibold">PlayStation</button><button data-platform="1" class="p-4 bg-gray-700 rounded-lg font-semibold">Xbox</button><button data-platform="7" class="p-4 bg-gray-700 rounded-lg font-semibold">Nintendo</button></div><button id="decide-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg">¡Sorpréndenos!</button><section id="coop-result" class="mt-12"></section></div>`; const platformButtons = document.querySelectorAll('#platform-selector button'); platformButtons.forEach(btn => btn.addEventListener('click', () => { btn.classList.toggle('bg-indigo-600'); btn.classList.toggle('bg-gray-700'); })); document.getElementById('decide-btn').addEventListener('click', async () => { const selected = Array.from(platformButtons).filter(btn => btn.classList.contains('bg-indigo-600')).map(btn => btn.dataset.platform); const resultSection = document.getElementById('coop-result'); if(selected.length === 0) { resultSection.innerHTML = `<p class="text-red-400">Selecciona al menos una plataforma.</p>`; return; } resultSection.innerHTML = `<div class="flex flex-col items-center"><span class="spinner"></span><p class="mt-4">Consultando al Oráculo...</p></div>`; try { const response = await fetch(`/api/get-coop-game?platforms=${selected.join(',')}`); const game = await response.json(); if (!response.ok) throw new Error(game.message); const tags = new Set(game.tags.map(tag => tag.slug)); let featuresHtml = ''; if (tags.has('online-co-op')) featuresHtml += `<span class="bg-blue-500 text-white text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">Online Co-op</span>`; if (tags.has('local-co-op')) featuresHtml += `<span class="bg-purple-500 text-white text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">Local Co-op</span>`; resultSection.innerHTML = `<div class="bg-gray-800 rounded-lg p-6 text-left animate-fadeIn"><h2 class="text-2xl font-bold text-indigo-400 mb-4">¡Hoy juegan a esto!</h2><div class="flex flex-col md:flex-row gap-6"><img src="${game.background_image}" class="w-full md:w-1/3 rounded-lg object-cover"><div><h3 class="text-3xl font-bold">${game.name}</h3>${tags.has('friend-pass') ? `<p class="mt-2 text-lg font-bold text-yellow-400 animate-pulse">✅ ¡Tiene Friend Pass!</p>` : ''}<p class="mt-4 text-green-400 font-semibold">Metacritic: ${game.metacritic}</p><div class="mt-4">${featuresHtml}</div></div></div></div>`; } catch(error) { resultSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`; } }); };
 
+        function initTimeMachine() {
+            const view = document.getElementById('time-machine-view');
+            const currentYear = new Date().getFullYear();
+            let yearsHtml = '';
+            for (let i = 0; i < 20; i++) { yearsHtml += `<option value="${currentYear - i}">${currentYear - i}</option>`; }
+            view.innerHTML = `<div class="text-center"><h2 class="text-3xl font-bold">La Máquina del Tiempo Gamer</h2><p class="text-gray-400 mt-2 mb-8">Selecciona un año y descubre sus juegos mejor valorados.</p><select id="year-selector" class="p-4 rounded-lg bg-gray-800 border-2 border-gray-700 mb-8">${yearsHtml}</select><div id="time-machine-results" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div></div>`;
+            
+            const yearSelector = document.getElementById('year-selector');
+            const resultsContainer = document.getElementById('time-machine-results');
+            
+            const loadYear = async (year) => {
+                resultsContainer.innerHTML = `<div class="col-span-full flex justify-center py-10"><span class="spinner"></span></div>`;
+                try {
+                    const response = await fetch(`/api/get-games-by-year?year=${year}`);
+                    const games = await response.json();
+                    resultsContainer.innerHTML = '';
+                    if (games.length === 0) {
+                         resultsContainer.innerHTML = `<p class="col-span-full text-gray-400">No se encontraron juegos con alta puntuación para ${year}.</p>`;
+                         return;
+                    }
+                    games.forEach(game => {
+                        resultsContainer.innerHTML += `<div class="bg-gray-800 rounded-lg overflow-hidden"><img src="${game.background_image}" class="w-full h-40 object-cover"><div class="p-3"><p class="font-bold truncate">${game.name}</p><p class="text-sm text-green-400">Metacritic: ${game.metacritic || 'N/A'}</p></div></div>`;
+                    });
+                } catch (error) { resultsContainer.innerHTML = `<p class="col-span-full text-red-400">No se pudieron cargar los juegos de ${year}.</p>`; }
+            };
+
+            yearSelector.addEventListener('change', () => loadYear(yearSelector.value));
+            loadYear(currentYear);
+        }
+
+        function initCoopDecider() {
+             const view = document.getElementById('co-op-decider-view');
+             view.innerHTML = `<div class="text-center"><h2 class="text-3xl font-bold">El Oráculo Co-op</h2><p class="text-gray-400 mt-2 mb-8">Seleccionen las plataformas que todos tienen y dejen que el destino decida.</p><div id="platform-selector" class="flex justify-center flex-wrap gap-4 mb-8"><button data-platform="4" class="p-4 bg-gray-700 rounded-lg font-semibold">PC</button><button data-platform="187" class="p-4 bg-gray-700 rounded-lg font-semibold">PlayStation</button><button data-platform="1" class="p-4 bg-gray-700 rounded-lg font-semibold">Xbox</button><button data-platform="7" class="p-4 bg-gray-700 rounded-lg font-semibold">Nintendo</button></div><button id="decide-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg text-lg">¡Sorpréndenos!</button><section id="coop-result" class="mt-12"></section></div>`;
+            
+            const platformButtons = document.querySelectorAll('#platform-selector button');
+            platformButtons.forEach(btn => btn.addEventListener('click', () => { btn.classList.toggle('bg-indigo-600'); btn.classList.toggle('bg-gray-700'); }));
+
+            document.getElementById('decide-btn').addEventListener('click', async () => {
+                const selected = Array.from(platformButtons).filter(btn => btn.classList.contains('bg-indigo-600')).map(btn => btn.dataset.platform);
+                const resultSection = document.getElementById('coop-result');
+                if(selected.length === 0) { resultSection.innerHTML = `<p class="text-red-400">Selecciona al menos una plataforma.</p>`; return; }
+                resultSection.innerHTML = `<div class="flex flex-col items-center"><span class="spinner"></span><p class="mt-4">Consultando al Oráculo...</p></div>`;
+                try {
+                    const response = await fetch(`/api/get-coop-game?platforms=${selected.join(',')}`);
+                    const game = await response.json();
+                    if (!response.ok) throw new Error(game.message);
+                    const tags = new Set(game.tags.map(tag => tag.slug));
+                    let featuresHtml = '';
+                    if (tags.has('online-co-op')) featuresHtml += `<span class="bg-blue-500 text-white text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">Online Co-op</span>`;
+                    if (tags.has('local-co-op')) featuresHtml += `<span class="bg-purple-500 text-white text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">Local Co-op</span>`;
+                    resultSection.innerHTML = `<div class="bg-gray-800 rounded-lg p-6 text-left animate-fadeIn"><h2 class="text-2xl font-bold text-indigo-400 mb-4">¡El Oráculo ha hablado! Hoy juegan a:</h2><div class="flex flex-col md:flex-row gap-6"><img src="${game.background_image}" class="w-full md:w-1/3 rounded-lg object-cover"><div><h3 class="text-3xl font-bold">${game.name}</h3>${tags.has('friend-pass') ? `<p class="mt-2 text-lg font-bold text-yellow-400 animate-pulse">✅ ¡Tiene Friend Pass!</p>` : ''}<p class="mt-4 text-green-400 font-semibold">Metacritic: ${game.metacritic}</p><div class="mt-4">${featuresHtml}</div></div></div></div>`;
+                } catch(error) { resultSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`; }
+            });
+        }
+        
         function main() {
             tabs.forEach(tab => tab.addEventListener('click', () => showView(tab.dataset.view)));
             initGameMatch();

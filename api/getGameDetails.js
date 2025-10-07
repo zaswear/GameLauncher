@@ -1,4 +1,3 @@
-// Contenido para /api/getGameDetails.js
 export default async function handler(request, response) {
     const RAWG_API_KEY = process.env.RAWG_API_KEY;
     if (!RAWG_API_KEY) { return response.status(500).json({ message: "RAWG API Key not configured." }); }
@@ -12,7 +11,6 @@ export default async function handler(request, response) {
         const apiResponse = await fetch(url);
         if (!apiResponse.ok) throw new Error(`Failed to fetch details from RAWG.`);
         const gameDetails = await apiResponse.json();
-
         response.status(200).json(gameDetails);
     } catch (error) {
         response.status(500).json({ message: "Server error.", details: error.message });

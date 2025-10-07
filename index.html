@@ -18,9 +18,9 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
+<body class="min-h-screen p-4 md:p-8 flex flex-col">
 
-    <main class="max-w-4xl mx-auto w-full">
+    <main class="max-w-4xl mx-auto w-full flex-grow">
         <header class="mb-8 text-center">
             <h1 class="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">
                 What To Play?
@@ -34,106 +34,180 @@
         </nav>
 
         <div id="views-container">
-            <section id="game-match-view" class="view-section">
-                <div class="text-center">
-                    <h2 class="text-3xl font-bold text-white">Encuentra tu Próxima Obsesión</h2>
-                    <p class="text-gray-400 mt-2 mb-8">Introduce hasta 3 de tus juegos favoritos y nuestro algoritmo encontrará tu match perfecto.</p>
-                    <div id="input-section" class="space-y-4 max-w-lg mx-auto mb-8">
-                        <input type="text" id="game-input-1" placeholder="Ej: The Witcher 3: Wild Hunt" class="w-full p-4 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition">
-                        <input type="text" id="game-input-2" placeholder="Ej: Hades" class="w-full p-4 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition">
-                        <input type="text" id="game-input-3" placeholder="Ej: Stardew Valley" class="w-full p-4 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-indigo-500 transition">
-                    </div>
-                    <button id="match-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105">
-                        ¡Encontrar mi Match!
-                    </button>
-                    <section id="result-section" class="mt-12"></section>
-                </div>
-            </section>
-
-            <section id="time-machine-view" class="view-section">
-                <div class="text-center p-10 bg-gray-800 rounded-lg">
-                    <h2 class="text-3xl font-bold text-white">⏳ Time Machine</h2>
-                    <p class="text-gray-400 mt-2">Esta herramienta se construirá en el siguiente paso.</p>
-                </div>
-            </section>
-
-            <section id="co-op-decider-view" class="view-section">
-                 <div class="text-center p-10 bg-gray-800 rounded-lg">
-                    <h2 class="text-3xl font-bold text-white">🎮 Co-op Decider</h2>
-                    <p class="text-gray-400 mt-2">Esta herramienta se construirá después.</p>
-                </div>
-            </section>
+            <section id="game-match-view" class="view-section"></section>
+            <section id="time-machine-view" class="view-section"></section>
+            <section id="co-op-decider-view" class="view-section"></section>
         </div>
         
         <div id="details-panel" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
+        <div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
     </main>
+    
+    <footer class="max-w-7xl mx-auto w-full mt-12 py-6 text-center text-gray-500 border-t border-gray-700">
+        <p>Creado por Zaswear</p>
+        <button id="contact-btn" class="mt-2 text-indigo-400 hover:underline">Contacto</button>
+    </footer>
 
     <script type="module">
+        // --- NAVEGACIÓN PRINCIPAL ---
         const views = document.querySelectorAll('.view-section');
         const tabs = document.querySelectorAll('.tab-btn');
-        const matchBtn = document.getElementById('match-btn');
-        const resultSection = document.getElementById('result-section');
 
         function showView(viewId) {
             views.forEach(view => view.classList.remove('active'));
             tabs.forEach(tab => tab.classList.remove('active'));
-
             document.getElementById(viewId + '-view').classList.add('active');
             document.querySelector(`[data-view='${viewId}']`).classList.add('active');
         }
 
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => showView(tab.dataset.view));
-        });
+        // --- LÓGICA DE CADA HERRAMIENTA ---
 
-        matchBtn.addEventListener('click', async () => {
-            const favorites = [
-                document.getElementById('game-input-1').value.trim(),
-                document.getElementById('game-input-2').value.trim(),
-                document.getElementById('game-input-3').value.trim()
-            ].filter(name => name !== '');
-
-            if (favorites.length === 0) {
-                resultSection.innerHTML = `<p class="text-red-400">Por favor, introduce al menos un juego.</p>`;
-                return;
-            }
-
-            resultSection.innerHTML = `<div class="flex flex-col items-center justify-center"><span class="spinner"></span><p class="mt-4 text-gray-400">Analizando tu perfil de gusto...</p></div>`;
-            matchBtn.disabled = true;
-
-            try {
-                const response = await fetch(`/api/get-game-match?favorites=${favorites.join(',')}`);
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message);
-                renderResult(result);
-            } catch (error) {
-                resultSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
-            } finally {
-                matchBtn.disabled = false;
-            }
-        });
-
-        function renderResult(game) {
-            resultSection.innerHTML = `
-                <div class="bg-gray-800 rounded-lg p-6 text-left animate-fadeIn">
-                    <h2 class="text-2xl font-bold text-indigo-400 mb-4">Tu Match Perfecto es...</h2>
-                    <div class="flex flex-col md:flex-row gap-6">
-                        <img src="${game.background_image}" class="w-full md:w-1/3 rounded-lg object-cover">
-                        <div>
-                            <h3 class="text-3xl font-bold text-white">${game.name}</h3>
-                            <p class="text-gray-400 mt-2">${new Date(game.released).getFullYear()}</p>
-                            <div class="mt-4">
-                                <span class="bg-green-500 text-white font-bold py-1 px-3 rounded-full text-sm">${game.metacritic || '?'}</span>
-                                <span class="ml-2 text-gray-300">Metacritic</span>
-                            </div>
-                        </div>
+        // #1: GAME-MATCH
+        function initGameMatch() {
+            const view = document.getElementById('game-match-view');
+            view.innerHTML = `
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-white">Encuentra tu Próxima Obsesión</h2>
+                    <p class="text-gray-400 mt-2 mb-8">Introduce hasta 3 de tus juegos favoritos y nuestro algoritmo encontrará tu match perfecto.</p>
+                    <div class="space-y-4 max-w-lg mx-auto mb-8">
+                        <input type="text" id="game-input-1" placeholder="Ej: The Witcher 3" class="w-full p-4 rounded-lg bg-gray-800 border-2 border-gray-700">
+                        <input type="text" id="game-input-2" placeholder="Ej: Hades" class="w-full p-4 rounded-lg bg-gray-800 border-2 border-gray-700">
+                        <input type="text" id="game-input-3" placeholder="Ej: Stardew Valley" class="w-full p-4 rounded-lg bg-gray-800 border-2 border-gray-700">
                     </div>
-                </div>
-            `;
+                    <button id="match-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg">¡Encontrar mi Match!</button>
+                    <section id="result-section" class="mt-12"></section>
+                </div>`;
+
+            document.getElementById('match-btn').addEventListener('click', async () => {
+                const favorites = [document.getElementById('game-input-1').value.trim(), document.getElementById('game-input-2').value.trim(), document.getElementById('game-input-3').value.trim()].filter(Boolean);
+                const resultSection = document.getElementById('result-section');
+                if (favorites.length === 0) { resultSection.innerHTML = `<p class="text-red-400">Introduce al menos un juego.</p>`; return; }
+                resultSection.innerHTML = `<div class="flex flex-col items-center"><span class="spinner"></span><p class="mt-4">Analizando tu perfil...</p></div>`;
+                try {
+                    const response = await fetch(`/api/get-game-match?favorites=${favorites.join(',')}`);
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message);
+                    resultSection.innerHTML = `<div class="bg-gray-800 rounded-lg p-6 text-left animate-fadeIn"><h2 class="text-2xl font-bold text-indigo-400 mb-4">Tu Match Perfecto es...</h2><div class="flex flex-col md:flex-row gap-6"><img src="${result.background_image}" class="w-full md:w-1/3 rounded-lg object-cover"><div><h3 class="text-3xl font-bold">${result.name}</h3><p class="mt-2 text-gray-400">${new Date(result.released).getFullYear()}</p></div></div></div>`;
+                } catch (error) { resultSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`; }
+            });
+        }
+
+        // #2: TIME MACHINE
+        function initTimeMachine() {
+            const view = document.getElementById('time-machine-view');
+            const currentYear = new Date().getFullYear();
+            let yearsHtml = '';
+            for (let i = 0; i < 20; i++) {
+                yearsHtml += `<option value="${currentYear - i}">${currentYear - i}</option>`;
+            }
+            view.innerHTML = `
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-white">La Máquina del Tiempo Gamer</h2>
+                    <p class="text-gray-400 mt-2 mb-8">Selecciona un año y descubre los juegos mejor valorados de esa época.</p>
+                    <select id="year-selector" class="p-4 rounded-lg bg-gray-800 border-2 border-gray-700 mb-8">${yearsHtml}</select>
+                    <div id="time-machine-results" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+                </div>`;
+            
+            const yearSelector = document.getElementById('year-selector');
+            const resultsContainer = document.getElementById('time-machine-results');
+            
+            const loadYear = async (year) => {
+                resultsContainer.innerHTML = `<div class="col-span-full flex justify-center py-10"><span class="spinner"></span></div>`;
+                try {
+                    const response = await fetch(`/api/get-games-by-year?year=${year}`);
+                    const games = await response.json();
+                    resultsContainer.innerHTML = '';
+                    games.forEach(game => {
+                        resultsContainer.innerHTML += `<div class="bg-gray-800 rounded-lg overflow-hidden"><img src="${game.background_image}" class="w-full h-40 object-cover"><div class="p-3"><p class="font-bold truncate">${game.name}</p><p class="text-sm text-green-400">Metacritic: ${game.metacritic || 'N/A'}</p></div></div>`;
+                    });
+                } catch (error) { resultsContainer.innerHTML = `<p class="col-span-full text-red-400">No se pudieron cargar los juegos de ${year}.</p>`; }
+            };
+
+            yearSelector.addEventListener('change', () => loadYear(yearSelector.value));
+            loadYear(currentYear); // Cargar el año actual por defecto
+        }
+
+        // #3: CO-OP DECIDER
+        function initCoopDecider() {
+             const view = document.getElementById('co-op-decider-view');
+             view.innerHTML = `
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-white">El Oráculo Co-op</h2>
+                    <p class="text-gray-400 mt-2 mb-8">¿No saben a qué jugar? Seleccionen las plataformas que todos tienen y dejen que el destino decida.</p>
+                    <div id="platform-selector" class="flex justify-center gap-4 mb-8">
+                        <button data-platform="4" class="p-4 bg-gray-700 rounded-lg transition-colors">PC</button>
+                        <button data-platform="187" class="p-4 bg-gray-700 rounded-lg transition-colors">PlayStation</button>
+                        <button data-platform="1" class="p-4 bg-gray-700 rounded-lg transition-colors">Xbox</button>
+                        <button data-platform="7" class="p-4 bg-gray-700 rounded-lg transition-colors">Nintendo</button>
+                    </div>
+                    <button id="decide-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg">¡Sorpréndenos!</button>
+                    <section id="coop-result" class="mt-12"></section>
+                </div>`;
+
+            const platformButtons = document.querySelectorAll('#platform-selector button');
+            platformButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    btn.classList.toggle('bg-indigo-600');
+                    btn.classList.toggle('bg-gray-700');
+                });
+            });
+
+            document.getElementById('decide-btn').addEventListener('click', async () => {
+                const selected = Array.from(platformButtons).filter(btn => btn.classList.contains('bg-indigo-600')).map(btn => btn.dataset.platform);
+                const resultSection = document.getElementById('coop-result');
+                if(selected.length === 0) { resultSection.innerHTML = `<p class="text-red-400">Selecciona al menos una plataforma.</p>`; return; }
+                resultSection.innerHTML = `<div class="flex flex-col items-center"><span class="spinner"></span><p class="mt-4">Consultando al Oráculo...</p></div>`;
+                try {
+                    const response = await fetch(`/api/get-coop-game?platforms=${selected.join(',')}`);
+                    const game = await response.json();
+                    if (!response.ok) throw new Error(game.message);
+                    resultSection.innerHTML = `<div class="bg-gray-800 rounded-lg p-6 text-left animate-fadeIn"><h2 class="text-2xl font-bold text-indigo-400 mb-4">¡Hoy juegan a esto!</h2><div class="flex flex-col md:flex-row gap-6"><img src="${game.background_image}" class="w-full md:w-1/3 rounded-lg object-cover"><div><h3 class="text-3xl font-bold">${game.name}</h3><p class="mt-2 text-green-400">Metacritic: ${game.metacritic}</p></div></div></div>`;
+                } catch(error) { resultSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`; }
+            });
         }
         
-        // Inicialización
-        showView('game-match'); // Mostrar la primera herramienta por defecto
+        // --- CONTACTO Y PIE DE PÁGINA ---
+        function initContact() {
+            document.getElementById('contact-btn').addEventListener('click', () => {
+                const modal = document.getElementById('contact-modal');
+                modal.innerHTML = `
+                    <div class="relative w-full max-w-lg bg-gray-800 border-gray-700 rounded-xl p-6 m-4 modal-enter" onclick="event.stopPropagation()">
+                        <button onclick="document.getElementById('contact-modal').classList.add('hidden')" class="absolute top-2 right-4 text-3xl">&times;</button>
+                        <h2 class="text-2xl font-bold text-indigo-400 mb-4">Contactar</h2><div id="contact-status" class="mb-4"></div>
+                        <form id="contact-form">
+                            <input type="text" id="subject" placeholder="Asunto" class="w-full p-2 mb-4 rounded bg-gray-700" required>
+                            <textarea id="message" rows="5" placeholder="Tu mensaje..." class="w-full p-2 mb-4 rounded bg-gray-700" required></textarea>
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg">Enviar</button>
+                        </form>
+                    </div>`;
+                modal.classList.remove('hidden');
+                modal.onclick = () => modal.classList.add('hidden');
+                document.getElementById('contact-form').onsubmit = async (e) => {
+                    e.preventDefault();
+                    const btn = e.target.querySelector('button'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+                    const statusDiv = document.getElementById('contact-status');
+                    try {
+                        const response = await fetch('/api/sendEmail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: document.getElementById('subject').value, message: document.getElementById('message').value }) });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.message);
+                        statusDiv.innerHTML = '<span class="text-green-400">¡Correo enviado con éxito!</span>';
+                        setTimeout(() => modal.classList.add('hidden'), 2000);
+                    } catch (error) { statusDiv.innerHTML = `<span class="text-red-400">Error: ${error.message}</span>`; btn.disabled = false; btn.innerHTML = 'Enviar'; }
+                };
+            });
+        }
+        
+        // --- INICIALIZACIÓN GENERAL ---
+        function main() {
+            tabs.forEach(tab => tab.addEventListener('click', () => showView(tab.dataset.view)));
+            initGameMatch();
+            initTimeMachine();
+            initCoopDecider();
+            initContact();
+            showView('game-match');
+        }
+
+        main();
     </script>
 </body>
 </html>

@@ -8,21 +8,19 @@ export default async function handler(request, response) {
 
         const currentYear = new Date().getFullYear();
         let ordering = '';
-        let metacriticFilter = ''; // Variable para el filtro de Metacritic
+        let metacriticFilter = '';
 
         if (year < currentYear) {
-            // Para años pasados, ordenamos por la mejor nota de Metacritic.
+            // Para años pasados, mantenemos la búsqueda por la mejor nota de Metacritic.
             ordering = '-metacritic';
-            // --- MODIFICACIÓN AQUÍ ---
-            // Se añade el filtro para que la nota de Metacritic esté entre 55 y 100.
             metacriticFilter = '&metacritic=55,100'; 
         } else {
-            // Para el año actual y futuros, ordenamos por fecha de lanzamiento.
-            ordering = 'released';
-            metacriticFilter = ''; // No aplicamos filtro de nota para juegos futuros
+            // --- MODIFICACIÓN AQUÍ ---
+            // Para el año actual y futuros, ahora ordenamos por popularidad para más relevancia.
+            ordering = '-added';
+            metacriticFilter = ''; // Mantenemos esto para incluir juegos futuros sin nota.
         }
 
-        // Se añade la variable metacriticFilter al final de la URL
         const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${year}-01-01,${year}-12-31&ordering=${ordering}&page_size=20${metacriticFilter}`;
         
         const apiResponse = await fetch(url);

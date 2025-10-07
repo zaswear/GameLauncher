@@ -5,16 +5,33 @@ export default async function handler(request, response) {
 
     try {
         const urlParams = new URL(request.url, `https://${request.headers.host}`).searchParams;
-        const year = urlParams.get('year'); // Recibimos el año como parámetro
+        const year = urlParams.get('year');
+        const filter = urlParams.get('filter') || 'popularity'; // Recibimos el filtro, por defecto es 'popularity'
 
         if (!year) {
             return response.status(400).json({ message: "No se proporcionó un año." });
         }
 
-        // Creamos el rango de fechas para el año solicitado
         const dates = `${year}-01-01,${year}-12-31`;
-        // Pedimos los juegos de ese año, ordenados por la mejor puntuación de Metacritic
-        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${dates}&ordering=-metacritic&page_size=40`;
+        let ordering = '-added'; // Por defecto, ordenamos por popularidad ('-added')
+        let genres = '';
+
+        // Cambiamos los parámetros de la API según el filtro seleccionado
+        switch (filter) {
+            case 'rating':
+                ordering = '-metacritic';
+                break;
+            case 'indie':
+                genres = '&genres=32'; // ID del género "Indie"
+                ordering = '-added';
+                break;
+            case 'popularity':
+            default:
+                ordering = '-added';
+                break;
+        }
+
+        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&dates=${dates}&ordering=${ordering}${genres}&page_size=40`;
 
         const apiResponse = await fetch(url);
         if (!apiResponse.ok) throw new Error(`Error al obtener datos de RAWG. Estado: ${apiResponse.status}`);
@@ -28,8 +45,7 @@ export default async function handler(request, response) {
             releaseDate: game.released,
             metacritic: game.metacritic || null,
             steamUrl: game.stores?.find(s => s.store.slug === 'steam')?.url,
-            trailerUrl: game.clip?.clip,
-            description: game.description || null, // Incluimos descripción para el modal
+            description: game.description || null,
             short_screenshots: game.short_screenshots || []
         }));
 

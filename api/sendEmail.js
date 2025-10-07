@@ -1,17 +1,13 @@
-// Contenido para /api/sendEmail.js
 import nodemailer from 'nodemailer';
 
 export default async function handler(request, response) {
     if (request.method !== 'POST') {
         return response.status(405).json({ message: 'Method Not Allowed' });
     }
-
     const { subject, message } = request.body;
     if (!subject || !message) {
         return response.status(400).json({ message: 'Faltan el asunto o el mensaje.' });
     }
-
-    // Configura el transportador de correo con tus credenciales seguras
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -19,12 +15,11 @@ export default async function handler(request, response) {
             pass: process.env.GMAIL_APP_PASSWORD,
         },
     });
-
     try {
         await transporter.sendMail({
-            from: `"GameVault Contact Form" <${process.env.GMAIL_USER}>`,
-            to: process.env.GMAIL_USER, // El correo se envía a ti mismo
-            subject: `[GameVault Contacto] ${subject}`,
+            from: `"MyGameVault Contact Form" <${process.env.GMAIL_USER}>`,
+            to: process.env.GMAIL_USER,
+            subject: `[MyGameVault Contacto] ${subject}`,
             text: message,
         });
         response.status(200).json({ success: true, message: 'Correo enviado correctamente.' });
